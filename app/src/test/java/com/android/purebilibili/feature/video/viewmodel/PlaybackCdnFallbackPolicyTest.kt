@@ -51,4 +51,67 @@ class PlaybackCdnFallbackPolicyTest {
 
         assertFalse(shouldFallbackFromCdnRewrite(consumed, playbackReady = false))
     }
+
+    @Test
+    fun `ready playback still falls back when rewritten audio track is missing`() {
+        val state = buildPlaybackCdnFallbackState(
+            selectedVideoUrl = "https://cn-sh-ct-01-01.bilivideo.com/video.m4s",
+            selectedAudioUrl = "https://cn-sh-ct-01-01.bilivideo.com/audio.m4s",
+            originalVideoUrl = "https://upos-sz-mirrorali.bilivideo.com/video.m4s",
+            originalAudioUrl = "https://upos-sz-mirrorali.bilivideo.com/audio.m4s",
+            regionLabel = "上海"
+        )
+
+        assertTrue(
+            shouldFallbackFromCdnRewrite(
+                state = state,
+                playbackReady = true,
+                expectedAudioTrack = true,
+                hasSelectedAudioTrack = false,
+                audioRendererError = false
+            )
+        )
+    }
+
+    @Test
+    fun `ready playback falls back immediately after audio renderer error`() {
+        val state = buildPlaybackCdnFallbackState(
+            selectedVideoUrl = "https://cn-sh-ct-01-01.bilivideo.com/video.m4s",
+            selectedAudioUrl = "https://cn-sh-ct-01-01.bilivideo.com/audio.m4s",
+            originalVideoUrl = "https://upos-sz-mirrorali.bilivideo.com/video.m4s",
+            originalAudioUrl = "https://upos-sz-mirrorali.bilivideo.com/audio.m4s",
+            regionLabel = "上海"
+        )
+
+        assertTrue(
+            shouldFallbackFromCdnRewrite(
+                state = state,
+                playbackReady = true,
+                expectedAudioTrack = true,
+                hasSelectedAudioTrack = true,
+                audioRendererError = true
+            )
+        )
+    }
+
+    @Test
+    fun `ready playback keeps rewritten source when audio track is selected`() {
+        val state = buildPlaybackCdnFallbackState(
+            selectedVideoUrl = "https://cn-sh-ct-01-01.bilivideo.com/video.m4s",
+            selectedAudioUrl = "https://cn-sh-ct-01-01.bilivideo.com/audio.m4s",
+            originalVideoUrl = "https://upos-sz-mirrorali.bilivideo.com/video.m4s",
+            originalAudioUrl = "https://upos-sz-mirrorali.bilivideo.com/audio.m4s",
+            regionLabel = "上海"
+        )
+
+        assertFalse(
+            shouldFallbackFromCdnRewrite(
+                state = state,
+                playbackReady = true,
+                expectedAudioTrack = true,
+                hasSelectedAudioTrack = true,
+                audioRendererError = false
+            )
+        )
+    }
 }

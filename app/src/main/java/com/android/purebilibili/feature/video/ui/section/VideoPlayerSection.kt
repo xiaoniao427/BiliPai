@@ -536,6 +536,9 @@ fun VideoPlayerSection(
     var longPressSpeedLocked by remember(bvid) { mutableStateOf(false) }
     var lockedLongPressSpeed by remember(bvid) { mutableFloatStateOf(1.0f) }
     var longPressSpeedEndedAtMs by remember { mutableLongStateOf(0L) }
+    var longPressSpeedStartedAtMs by remember { mutableLongStateOf(0L) }
+    var longPressSpeedStartX by remember { mutableFloatStateOf(-1f) }
+    var longPressSpeedStartY by remember { mutableFloatStateOf(-1f) }
     val longPressSpeedLockSensitivity = remember(isFullscreen) {
         resolveLongPressSpeedLockSensitivityPolicy(isFullscreen = isFullscreen)
     }
@@ -941,7 +944,7 @@ fun VideoPlayerSection(
         onUserSeek(commitResult.committedPositionMs)
     }
 
-    fun startLongPressSpeedGesture() {
+    fun startLongPressSpeedGesture(startOffset: Offset? = null) {
         if (
             !shouldEnableLongPressSpeedGesture(
                 isScreenLocked = isScreenLocked,
@@ -985,9 +988,37 @@ fun VideoPlayerSection(
         }
         isLongPressing = true
         totalDragDistanceY = 0f
+        totalDragDistanceX = 0f
+        longPressSpeedStartedAtMs = android.os.SystemClock.elapsedRealtime()
+        longPressSpeedStartX = startOffset?.x ?: -1f
+        longPressSpeedStartY = startOffset?.y ?: -1f
         longPressSpeedFeedbackVisible = true
         com.android.purebilibili.core.util.Logger.d("VideoPlayerSection") {
             "⏩ LongPress: speed ${effectiveLongPressSpeed}x (requested=${longPressSpeed}x, audio=$currentAudioQuality)"
+        }
+    }
+
+    fun unlockLockedLongPressSpeedFromGesture() {
+        if (!longPressSpeedLocked) return
+        longPressSpeedLocked = false
+        lockedLongPressSpeed = originalPlaybackParameters.speed
+        playerState.player.playbackParameters = originalPlaybackParameters
+        isLongPressing = false
+        longPressSpeedFeedbackVisible = false
+        longPressSpeedEndedAtMs = android.os.SystemClock.elapsedRealtime()
+        totalDragDistanceY = 0f
+        totalDragDistanceX = 0f
+        longPressSpeedStartedAtMs = 0L
+        longPressSpeedStartX = -1f
+        longPressSpeedStartY = -1f
+        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        Toast.makeText(
+            context,
+            "已解除倍速锁定",
+            Toast.LENGTH_SHORT
+        ).show()
+        com.android.purebilibili.core.util.Logger.d("VideoPlayerSection") {
+            "🔓 LongPress unlocked: speed ${originalPlaybackParameters.speed}x"
         }
     }
 
@@ -1007,6 +1038,9 @@ fun VideoPlayerSection(
         longPressSpeedEndedAtMs = android.os.SystemClock.elapsedRealtime()
         totalDragDistanceY = 0f
         totalDragDistanceX = 0f
+        longPressSpeedStartedAtMs = 0L
+        longPressSpeedStartX = -1f
+        longPressSpeedStartY = -1f
         com.android.purebilibili.core.util.Logger.d("VideoPlayerSection") {
             if (longPressSpeedLocked) {
                 "🔒 LongPress locked: speed ${lockedLongPressSpeed}x"
@@ -1526,8 +1560,8 @@ fun VideoPlayerSection(
                 isFullscreen
             ) {
                 detectDragGesturesAfterLongPress(
-                    onDragStart = {
-                        startLongPressSpeedGesture()
+                    onDragStart = { startOffset ->
+                        startLongPressSpeedGesture(startOffset)
                     },
                     onDragEnd = {
                         finishLongPressSpeedGesture(gestureEnded = true)
@@ -1547,8 +1581,32 @@ fun VideoPlayerSection(
                             return@detectDragGesturesAfterLongPress
                         }
                         totalDragDistanceY += dragAmount.y
+                        totalDragDistanceX += dragAmount.x
                         val lockZoneHeightPx = longPressSpeedLockSensitivity.lockZoneHeightDp.dp.toPx()
                         val minLockDragDistancePx = longPressSpeedLockSensitivity.minDragDistanceDp.dp.toPx()
+                        val holdDurationMs = (
+                            android.os.SystemClock.elapsedRealtime() - longPressSpeedStartedAtMs
+                            ).coerceAtLeast(0L)
+                        if (
+                            shouldUnlockLockedLongPressSpeedFromRightDownDrag(
+                                longPressSpeedLocked = longPressSpeedLocked,
+                                isLongPressing = isLongPressing,
+                                startX = longPressSpeedStartX,
+                                startY = longPressSpeedStartY,
+                                currentY = change.position.y,
+                                containerWidthPx = size.width.toFloat(),
+                                holdDurationMs = holdDurationMs,
+                                minDownDragPx = minLockDragDistancePx
+                            )
+                        ) {
+                            unlockLockedLongPressSpeedFromGesture()
+                            change.consume()
+                            return@detectDragGesturesAfterLongPress
+                        }
+                        if (longPressSpeedLocked) {
+                            change.consume()
+                            return@detectDragGesturesAfterLongPress
+                        }
                         if (
                             shouldLockLongPressSpeedInTargetZone(
                                 isLongPressing = isLongPressing,

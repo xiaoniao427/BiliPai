@@ -134,6 +134,7 @@ internal fun HomeCategoryPageContent(
     onTodayWatchModeChange: (TodayWatchMode) -> Unit = {},
     onTodayWatchCollapsedChange: (Boolean) -> Unit = {},
     onTodayWatchRefresh: () -> Unit = {},
+    onTodayWatchUpClick: (Long) -> Unit = {},
     popularSubCategory: PopularSubCategory = PopularSubCategory.COMPREHENSIVE,
     onPopularSubCategoryChange: (PopularSubCategory) -> Unit = {},
     onTodayWatchVideoClick: (VideoItem) -> Unit = { video ->
@@ -283,6 +284,7 @@ internal fun HomeCategoryPageContent(
                             onModeChange = onTodayWatchModeChange,
                             onCollapsedChange = onTodayWatchCollapsedChange,
                             onRefresh = onTodayWatchRefresh,
+                            onUpClick = onTodayWatchUpClick,
                             onVideoClick = onTodayWatchVideoClick
                         )
                     }
@@ -519,6 +521,7 @@ private fun TodayWatchPlanCard(
     onModeChange: (TodayWatchMode) -> Unit,
     onCollapsedChange: (Boolean) -> Unit,
     onRefresh: () -> Unit,
+    onUpClick: (Long) -> Unit,
     onVideoClick: (VideoItem) -> Unit
 ) {
     var revealContent by remember(plan?.generatedAt, isLoading, cardConfig.enableWaterfallAnimation) {
@@ -679,11 +682,17 @@ private fun TodayWatchPlanCard(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         activePlan.upRanks.forEachIndexed { index, up ->
+                            val clickable = shouldEnableTodayWatchUpRankClick(up)
                             Text(
                                 text = "${index + 1}. ${up.name}",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = if (clickable) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
                                 modifier = Modifier
+                                    .clickable(enabled = clickable) { onUpClick(up.mid) }
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }

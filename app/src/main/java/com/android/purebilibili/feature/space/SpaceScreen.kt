@@ -51,6 +51,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -122,6 +123,8 @@ import com.android.purebilibili.feature.dynamic.components.DynamicCommentOverlay
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewDialog
 import com.android.purebilibili.feature.dynamic.components.RepostDialog
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
+import com.android.purebilibili.feature.list.VideoProgressDisplayState
+import com.android.purebilibili.feature.video.controller.PlaybackProgressManager
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
@@ -130,12 +133,12 @@ import kotlinx.coroutines.launch
 fun SpaceScreen(
     mid: Long,
     onBack: () -> Unit,
-    onVideoClick: (String) -> Unit,
+    onVideoClick: (String, Long) -> Unit,
     onAudioClick: (Long) -> Unit = {},
     onBangumiClick: (Long) -> Unit = {},
     onWebClick: (String, String) -> Unit = { _, _ -> },
     onUserClick: (Long) -> Unit = {},
-    onPlayAllAudioClick: ((String) -> Unit)? = null,
+    onPlayAllAudioClick: ((String, Long) -> Unit)? = null,
     onDynamicDetailClick: (String) -> Unit = {},
     onArticleClick: (Long, String) -> Unit = { _, _ -> },
     onViewAllClick: (String, Long, Long, String, String) -> Unit = { _, _, _, _, _ -> },
@@ -144,6 +147,12 @@ fun SpaceScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val context = LocalContext.current
+    val playbackProgressManager = remember(context) {
+        PlaybackProgressManager.getInstance(context)
+    }
+    val videoProgressLookup: (String) -> Long = remember(playbackProgressManager) {
+        { bvid -> playbackProgressManager.getCachedPosition(bvid) }
+    }
     val dynamicInteractionViewModel: DynamicViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
     val likedDynamics by dynamicInteractionViewModel.likedDynamics.collectAsState()
@@ -323,6 +332,7 @@ fun SpaceScreen(
                             state = state,
                             gridState = gridState,
                             onVideoClick = onVideoClick,
+                            videoProgressLookup = videoProgressLookup,
                             onAudioClick = onAudioClick,
                             onBangumiClick = onBangumiClick,
                             onWebClick = onWebClick,
@@ -555,12 +565,13 @@ fun SpaceScreen(
 private fun SpaceContent(
     state: SpaceUiState.Success,
     gridState: LazyGridState,
-    onVideoClick: (String) -> Unit,
+    onVideoClick: (String, Long) -> Unit,
+    videoProgressLookup: (String) -> Long,
     onAudioClick: (Long) -> Unit,
     onBangumiClick: (Long) -> Unit,
     onWebClick: (String, String) -> Unit,
     onUserClick: (Long) -> Unit,
-    onPlayAllAudioClick: ((String) -> Unit)?,
+    onPlayAllAudioClick: ((String, Long) -> Unit)?,
     onDynamicDetailClick: (String) -> Unit,
     onArticleClick: (Long, String) -> Unit,
     onViewAllClick: (String, Long, Long, String, String) -> Unit,
@@ -645,16 +656,17 @@ private fun SpaceContent(
         }
     }
     val playVideoFromSpace: (String) -> Unit = play@{ bvid ->
+        val resumePositionMs = resolveSpaceResumePositionMs(videoProgressLookup(bvid))
         val playlist = buildExternalPlaylistFromSpaceVideos(
             videos = state.videos,
             clickedBvid = bvid
-        ) ?: return@play onVideoClick(bvid)
+        ) ?: return@play onVideoClick(bvid, resumePositionMs)
         com.android.purebilibili.feature.video.player.PlaylistManager.setExternalPlaylist(
             playlist.playlistItems,
             playlist.startIndex,
             source = com.android.purebilibili.feature.video.player.ExternalPlaylistSource.SPACE
         )
-        onVideoClick(bvid)
+        onVideoClick(bvid, resumePositionMs)
     }
     val playAllSpaceVideos: () -> Unit = playAll@{
         val startBvid = resolveSpacePlayAllStartTarget(state.videos) ?: return@playAll
@@ -667,9 +679,10 @@ private fun SpaceContent(
             playlist.startIndex,
             source = com.android.purebilibili.feature.video.player.ExternalPlaylistSource.SPACE
         )
+        val resumePositionMs = resolveSpaceResumePositionMs(videoProgressLookup(startBvid))
         com.android.purebilibili.feature.video.player.PlaylistManager
             .setPlayMode(com.android.purebilibili.feature.video.player.PlayMode.SEQUENTIAL)
-        onPlayAllAudioClick?.invoke(startBvid) ?: onVideoClick(startBvid)
+        onPlayAllAudioClick?.invoke(startBvid, resumePositionMs) ?: onVideoClick(startBvid, resumePositionMs)
     }
 
     LaunchedEffect(state.userInfo.mid) {
@@ -770,8 +783,10 @@ private fun SpaceContent(
                         )
                     }
                     items(state.videos.take(4), key = { "home_video_${it.bvid}" }) { video ->
+                        val localProgressMs = videoProgressLookup(video.bvid)
                         SpaceHomeVideoCard(
                             video = video,
+                            progressState = resolveSpaceVideoProgressState(video, localProgressMs),
                             onClick = { playVideoFromSpace(video.bvid) }
                         )
                     }
@@ -1135,12 +1150,15 @@ private fun SpaceContent(
                             ) { layoutMode ->
                                 when (layoutMode) {
                                     SpaceContributionVideoLayoutMode.GRID -> {
+                                        val localProgressMs = videoProgressLookup(video.bvid)
                                         SpaceHomeVideoCard(
                                             video = video,
+                                            progressState = resolveSpaceVideoProgressState(video, localProgressMs),
                                             onClick = { playVideoFromSpace(video.bvid) }
                                         )
                                     }
                                     SpaceContributionVideoLayoutMode.SINGLE_COLUMN -> {
+                                        val localProgressMs = videoProgressLookup(video.bvid)
                                         SpaceArchiveListItemRow(
                                             title = video.title,
                                             cover = video.pic,
@@ -1148,6 +1166,7 @@ private fun SpaceContent(
                                             publishTime = FormatUtils.formatPublishTime(video.created),
                                             play = video.play.toLong(),
                                             secondaryCount = video.comment.toLong(),
+                                            progressState = resolveSpaceVideoProgressState(video, localProgressMs),
                                             onClick = { playVideoFromSpace(video.bvid) },
                                             sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(video.bvid),
                                             sharedTransitionScope = sharedTransitionScope,
@@ -1271,7 +1290,12 @@ private fun SpaceContent(
                                 publishTime = FormatUtils.formatPublishTime(archive.pubdate),
                                 play = archive.stat.view,
                                 secondaryCount = archive.stat.danmaku,
-                                onClick = { onVideoClick(archive.bvid) },
+                                onClick = {
+                                    onVideoClick(
+                                        archive.bvid,
+                                        resolveSpaceResumePositionMs(videoProgressLookup(archive.bvid))
+                                    )
+                                },
                                 sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(archive.bvid),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope
@@ -1319,7 +1343,12 @@ private fun SpaceContent(
                                 publishTime = FormatUtils.formatPublishTime(archive.pubdate),
                                 play = archive.stat.view,
                                 secondaryCount = archive.stat.danmaku,
-                                onClick = { onVideoClick(archive.bvid) },
+                                onClick = {
+                                    onVideoClick(
+                                        archive.bvid,
+                                        resolveSpaceResumePositionMs(videoProgressLookup(archive.bvid))
+                                    )
+                                },
                                 sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(archive.bvid),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope
@@ -2117,6 +2146,7 @@ private fun SpaceSectionHeader(
 @Composable
 private fun SpaceHomeVideoCard(
     video: SpaceVideoItem,
+    progressState: VideoProgressDisplayState,
     onClick: () -> Unit
 ) {
     Column(
@@ -2157,6 +2187,18 @@ private fun SpaceHomeVideoCard(
                     color = Color.White
                 )
             }
+
+            if (progressState.showProgressBar) {
+                LinearProgressIndicator(
+                    progress = { progressState.progressFraction },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(3.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.28f)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -2169,6 +2211,23 @@ private fun SpaceHomeVideoCard(
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface
         )
+        val metadata = remember(video.created, video.play, progressState.progressSec) {
+            buildList {
+                if (video.created > 0L) add(FormatUtils.formatPublishTime(video.created))
+                if (video.play > 0) add("${FormatUtils.formatStat(video.play.toLong())}播放")
+                if (progressState.progressSec == -1) add("已看完")
+            }.joinToString(" · ")
+        }
+        if (metadata.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = metadata,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -2384,6 +2443,7 @@ private fun SpaceArchiveListItemRow(
     publishTime: String,
     play: Long,
     secondaryCount: Long,
+    progressState: VideoProgressDisplayState? = null,
     onClick: () -> Unit,
     sharedTransitionKey: String? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -2473,6 +2533,17 @@ private fun SpaceArchiveListItemRow(
                     )
                 }
             }
+            if (progressState?.showProgressBar == true) {
+                LinearProgressIndicator(
+                    progress = { progressState.progressFraction },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(3.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.28f)
+                )
+            }
         }
 
         Column(
@@ -2522,7 +2593,7 @@ private fun SpaceArchiveListItemRow(
                 )
             }
             Text(
-                text = publishTime,
+                text = if (progressState?.progressSec == -1) "$publishTime · 已看完" else publishTime,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

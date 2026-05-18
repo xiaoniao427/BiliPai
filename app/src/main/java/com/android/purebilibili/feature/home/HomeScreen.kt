@@ -172,6 +172,7 @@ fun HomeScreen(
     onDownloadClick: () -> Unit = {},  // 离线缓存页面
     onInboxClick: () -> Unit = {},  // 私信页面
     onStoryClick: () -> Unit = {},  //  [新增] 竖屏短视频
+    onSpaceClick: (Long) -> Unit = {},
     globalHazeState: dev.chrisbanes.haze.HazeState? = null,  //  [新增] 全局底栏模糊状态
     predictiveStableBackRouteMotionEnabled: Boolean = false
 ) {
@@ -1346,6 +1347,7 @@ fun HomeScreen(
                                  val onTodayWatchModeChange = remember(viewModel) { { mode: TodayWatchMode -> viewModel.switchTodayWatchMode(mode) } }
                                  val onTodayWatchCollapsedChange = remember(viewModel) { { collapsed: Boolean -> viewModel.setTodayWatchCollapsed(collapsed) } }
                                  val onTodayWatchRefresh = remember(viewModel) { { viewModel.refreshTodayWatchOnly() } }
+                                 val onTodayWatchUpClick = remember(onSpaceClick) { { mid: Long -> onSpaceClick(mid) } }
                                  val onPopularSubCategoryChange = remember(viewModel) {
                                      { subCategory: PopularSubCategory -> viewModel.switchPopularSubCategory(subCategory) }
                                  }
@@ -1416,6 +1418,7 @@ fun HomeScreen(
                                      onTodayWatchModeChange = onTodayWatchModeChange,
                                      onTodayWatchCollapsedChange = onTodayWatchCollapsedChange,
                                      onTodayWatchRefresh = onTodayWatchRefresh,
+                                     onTodayWatchUpClick = onTodayWatchUpClick,
                                      popularSubCategory = state.popularSubCategory,
                                      onPopularSubCategoryChange = onPopularSubCategoryChange,
                                      onTodayWatchVideoClick = onTodayWatchVideoClick,

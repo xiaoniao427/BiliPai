@@ -8,9 +8,11 @@ import com.android.purebilibili.feature.video.usecase.*
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import com.android.purebilibili.core.cache.PlayUrlCache
 import com.android.purebilibili.core.cooldown.PlaybackCooldownManager
@@ -203,6 +205,19 @@ internal fun shouldFallbackFromCdnRewrite(
     playbackReady: Boolean
 ): Boolean {
     return state.usesCdnRewrite && !playbackReady
+}
+
+internal fun shouldFallbackFromCdnRewrite(
+    state: PlaybackCdnFallbackState,
+    playbackReady: Boolean,
+    expectedAudioTrack: Boolean,
+    hasSelectedAudioTrack: Boolean,
+    audioRendererError: Boolean
+): Boolean {
+    if (!state.usesCdnRewrite) return false
+    if (!playbackReady) return true
+    if (audioRendererError) return true
+    return expectedAudioTrack && !hasSelectedAudioTrack
 }
 
 internal fun hostForPlaybackLog(url: String?): String {
@@ -1663,7 +1678,7 @@ class PlayerViewModel : ViewModel() {
     private val playbackEndListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_READY) {
-                markPlaybackCdnReady()
+                markPlaybackCdnReadyIfMediaReady()
             }
             if (playbackState == Player.STATE_ENDED) {
                 // �️ [修复] 仅当用户主动开始播放后才触发自动连播
@@ -1731,6 +1746,10 @@ class PlayerViewModel : ViewModel() {
                 // 🛡️ [修复] 用户开始播放时设置标志
                 hasUserStartedPlayback = true
             }
+        }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            markPlaybackCdnReadyIfMediaReady()
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -6263,13 +6282,36 @@ class PlayerViewModel : ViewModel() {
         playbackCdnFallbackJob = viewModelScope.launch {
             delay(PLAYBACK_CDN_FIRST_FRAME_FALLBACK_TIMEOUT_MS)
             val playbackReady = exoPlayer?.playbackState == Player.STATE_READY
-            if (shouldFallbackFromCdnRewrite(playbackCdnFallbackState, playbackReady)) {
-                fallbackFromCdnRewrite(reason = "first_frame_timeout")
+            val expectedAudioTrack = playbackCdnFallbackState.selectedAudioUrl != null
+            val hasSelectedAudioTrack = hasSelectedAudioTrack(exoPlayer)
+            if (shouldFallbackFromCdnRewrite(
+                    state = playbackCdnFallbackState,
+                    playbackReady = playbackReady,
+                    expectedAudioTrack = expectedAudioTrack,
+                    hasSelectedAudioTrack = hasSelectedAudioTrack,
+                    audioRendererError = false
+                )
+            ) {
+                val reason = if (playbackReady && expectedAudioTrack && !hasSelectedAudioTrack) {
+                    "audio_track_timeout"
+                } else {
+                    "first_frame_timeout"
+                }
+                fallbackFromCdnRewrite(reason = reason)
             }
         }
     }
 
-    private fun markPlaybackCdnReady() {
+    private fun markPlaybackCdnReadyIfMediaReady() {
+        val state = playbackCdnFallbackState
+        if (state.usesCdnRewrite && state.selectedAudioUrl != null && !hasSelectedAudioTrack(exoPlayer)) {
+            Logger.d(
+                "PlayerVM",
+                "CDN fallback remains armed: region=${state.regionLabel ?: "unknown"}, " +
+                    "audio=${hostForPlaybackLog(state.selectedAudioUrl)}, fallbackAudio=${hostForPlaybackLog(state.fallbackAudioUrl)}"
+            )
+            return
+        }
         playbackCdnFallbackJob?.cancel()
         playbackCdnFallbackJob = null
     }
@@ -6293,7 +6335,9 @@ class PlayerViewModel : ViewModel() {
         Logger.w(
             "PlayerVM",
             "CDN fallback: reason=$reason, region=${state.regionLabel ?: "unknown"}, " +
-                "selected=${hostForPlaybackLog(state.selectedVideoUrl)}, fallback=${hostForPlaybackLog(fallbackVideoUrl)}"
+                "selected=${hostForPlaybackLog(state.selectedVideoUrl)}, fallback=${hostForPlaybackLog(fallbackVideoUrl)}, " +
+                "audio=${hostForPlaybackLog(state.selectedAudioUrl)}, fallbackAudio=${hostForPlaybackLog(state.fallbackAudioUrl)}, " +
+                "quality=${_audioQualityPreference.value}"
         )
         playResolvedPlayback(
             videoUrl = fallbackVideoUrl,
@@ -6317,6 +6361,12 @@ class PlayerViewModel : ViewModel() {
             } else {
                 current
             }
+        }
+    }
+
+    private fun hasSelectedAudioTrack(player: Player?): Boolean {
+        return player?.currentTracks?.groups.orEmpty().any { group ->
+            group.type == C.TRACK_TYPE_AUDIO && group.isSelected
         }
     }
 

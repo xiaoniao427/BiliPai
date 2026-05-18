@@ -120,4 +120,24 @@ class CommentPaginationPolicyTest {
 
         assertEquals(34, data.getAllCount())
     }
+
+    @Test
+    fun `sub reply page should keep pagination open when detail count exceeds loaded items`() {
+        assertFalse(
+            resolveSubReplyPageEnd(
+                cursorIsEnd = true,
+                fetchedReplyCount = 2,
+                loadedReplyCount = 2,
+                remoteReplyCount = 8
+            )
+        )
+        assertTrue(
+            resolveSubReplyPageEnd(
+                cursorIsEnd = true,
+                fetchedReplyCount = 8,
+                loadedReplyCount = 8,
+                remoteReplyCount = 8
+            )
+        )
+    }
 }

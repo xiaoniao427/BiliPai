@@ -24,6 +24,7 @@ private const val VIDEO_PLAYER_COVER_REVEAL_HOLD_DELAY_MILLIS = 96
 private const val VIDEO_PLAYER_SURFACE_REVEAL_DURATION_MILLIS = 220
 private const val VIDEO_PLAYER_SURFACE_REVEAL_INITIAL_SCALE = 0.985f
 private const val LONG_PRESS_SPEED_TAP_SUPPRESSION_WINDOW_MS = 450L
+private const val LONG_PRESS_SPEED_UNLOCK_HOLD_MS = 1_000L
 
 internal const val LONG_PRESS_SPEED_LOCK_ZONE_HEIGHT_DP = 96
 internal const val FOREGROUND_SURFACE_RECOVERY_DELAY_MS = 80L
@@ -186,7 +187,7 @@ internal fun resolveLongPressSpeedStartDecision(
             requestedSpeed = requestedSpeed,
             currentAudioQuality = currentAudioQuality
         ),
-        clearExistingLock = longPressSpeedLocked
+        clearExistingLock = false
     )
 }
 
@@ -264,6 +265,23 @@ internal fun shouldConsumeExclusiveLongPressSpeedDrag(
     longPressSpeedLocked: Boolean
 ): Boolean {
     return isLongPressing && !longPressSpeedLocked
+}
+
+internal fun shouldUnlockLockedLongPressSpeedFromRightDownDrag(
+    longPressSpeedLocked: Boolean,
+    isLongPressing: Boolean,
+    startX: Float,
+    startY: Float,
+    currentY: Float,
+    containerWidthPx: Float,
+    holdDurationMs: Long,
+    minDownDragPx: Float,
+    minHoldDurationMs: Long = LONG_PRESS_SPEED_UNLOCK_HOLD_MS
+): Boolean {
+    if (!longPressSpeedLocked || !isLongPressing) return false
+    if (containerWidthPx <= 0f || startX < containerWidthPx * 0.5f) return false
+    if (holdDurationMs < minHoldDurationMs.coerceAtLeast(0L)) return false
+    return currentY - startY >= minDownDragPx.coerceAtLeast(0f)
 }
 
 internal fun shouldReapplyLockedLongPressSpeed(

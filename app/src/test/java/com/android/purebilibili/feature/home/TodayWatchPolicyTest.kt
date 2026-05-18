@@ -35,6 +35,20 @@ class TodayWatchPolicyTest {
     }
 
     @Test
+    fun `up rank click only enables valid creator mid`() {
+        assertTrue(
+            shouldEnableTodayWatchUpRankClick(
+                TodayUpRank(mid = 42L, name = "UP-A", score = 3.0, watchCount = 2)
+            )
+        )
+        assertFalse(
+            shouldEnableTodayWatchUpRankClick(
+                TodayUpRank(mid = 0L, name = "UP-B", score = 3.0, watchCount = 2)
+            )
+        )
+    }
+
+    @Test
     fun `night signal pushes short and calm videos`() {
         val history = listOf(
             VideoItem(bvid = "h1", owner = Owner(mid = 1, name = "UP-A"), duration = 600, progress = 500, view_at = 1_700_000_000)

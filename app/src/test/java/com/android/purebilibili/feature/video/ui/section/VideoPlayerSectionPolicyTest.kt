@@ -758,7 +758,7 @@ class VideoPlayerSectionPolicyTest {
 
         assertEquals(PlaybackParameters(1.0f, 1.0f), decision.originalPlaybackParameters)
         assertEquals(PlaybackParameters(2.0f, 1.0f), decision.targetPlaybackParameters)
-        assertTrue(decision.clearExistingLock)
+        assertFalse(decision.clearExistingLock)
     }
 
     @Test
@@ -1089,6 +1089,58 @@ class VideoPlayerSectionPolicyTest {
             shouldConsumeExclusiveLongPressSpeedDrag(
                 isLongPressing = false,
                 longPressSpeedLocked = false
+            )
+        )
+    }
+
+    @Test
+    fun lockedLongPressSpeedUnlock_requiresRightSideHoldAndDownwardDrag() {
+        assertTrue(
+            shouldUnlockLockedLongPressSpeedFromRightDownDrag(
+                longPressSpeedLocked = true,
+                isLongPressing = true,
+                startX = 720f,
+                startY = 300f,
+                currentY = 380f,
+                containerWidthPx = 1_000f,
+                holdDurationMs = 1_100L,
+                minDownDragPx = 56f
+            )
+        )
+        assertFalse(
+            shouldUnlockLockedLongPressSpeedFromRightDownDrag(
+                longPressSpeedLocked = true,
+                isLongPressing = true,
+                startX = 420f,
+                startY = 300f,
+                currentY = 380f,
+                containerWidthPx = 1_000f,
+                holdDurationMs = 1_100L,
+                minDownDragPx = 56f
+            )
+        )
+        assertFalse(
+            shouldUnlockLockedLongPressSpeedFromRightDownDrag(
+                longPressSpeedLocked = true,
+                isLongPressing = true,
+                startX = 720f,
+                startY = 300f,
+                currentY = 340f,
+                containerWidthPx = 1_000f,
+                holdDurationMs = 1_100L,
+                minDownDragPx = 56f
+            )
+        )
+        assertFalse(
+            shouldUnlockLockedLongPressSpeedFromRightDownDrag(
+                longPressSpeedLocked = true,
+                isLongPressing = true,
+                startX = 720f,
+                startY = 300f,
+                currentY = 380f,
+                containerWidthPx = 1_000f,
+                holdDurationMs = 900L,
+                minDownDragPx = 56f
             )
         )
     }

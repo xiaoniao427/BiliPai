@@ -30,6 +30,10 @@ internal data class TodayWatchPenaltySignals(
     val dislikedKeywords: Set<String> = emptySet()
 )
 
+internal fun shouldEnableTodayWatchUpRankClick(upRank: TodayUpRank): Boolean {
+    return upRank.mid > 0L
+}
+
 /**
  * 基于本地历史记录和当前推荐候选，构建“今日推荐单”。
  *

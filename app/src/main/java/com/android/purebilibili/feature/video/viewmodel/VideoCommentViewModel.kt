@@ -29,6 +29,8 @@ enum class CommentSortMode(val apiMode: Int, val label: String) {
     }
 }
 
+private const val SUB_REPLY_FIRST_PAGE_SIZE = 20
+
 // 评论状态
 data class CommentUiState(
     val replies: List<ReplyItem> = emptyList(),
@@ -113,6 +115,18 @@ internal fun resolveSubReplyRemoteTotalCount(data: ReplyData): Int {
         data.root?.count ?: 0,
         data.page.acount
     ).firstOrNull { it > 0 } ?: 0
+}
+
+internal fun resolveSubReplyPageEnd(
+    cursorIsEnd: Boolean,
+    fetchedReplyCount: Int,
+    loadedReplyCount: Int,
+    remoteReplyCount: Int
+): Boolean {
+    if (remoteReplyCount > loadedReplyCount.coerceAtLeast(0)) {
+        return false
+    }
+    return cursorIsEnd || fetchedReplyCount <= 0
 }
 
 class VideoCommentViewModel : ViewModel() {
@@ -476,18 +490,25 @@ class VideoCommentViewModel : ViewModel() {
                 type = 1,
                 rootId = rootId,
                 page = page,
+                ps = SUB_REPLY_FIRST_PAGE_SIZE,
                 paginationOffset = _subReplyState.value.grpcNextOffset
             )
             result.onSuccess { data ->
                 val current = _subReplyState.value
                 val newItems = data.replies ?: emptyList()
-                val isEnd = data.cursor.isEnd || newItems.isEmpty()
                 val updatedItems = if (page == 1) newItems else (current.items + newItems).distinctBy { it.rpid }
                 val nextOffset = data.grpcNextOffset.takeIf { it.isNotBlank() }
+                val remoteTotalCount = resolveSubReplyRemoteTotalCount(data)
                 val totalCount = resolveSubReplyLoadedTotalCount(
                     rootReply = current.rootReply,
                     loadedReplyCount = updatedItems.size,
-                    remoteReplyCount = resolveSubReplyRemoteTotalCount(data)
+                    remoteReplyCount = remoteTotalCount
+                )
+                val isEnd = resolveSubReplyPageEnd(
+                    cursorIsEnd = data.cursor.isEnd,
+                    fetchedReplyCount = newItems.size,
+                    loadedReplyCount = updatedItems.size,
+                    remoteReplyCount = remoteTotalCount
                 )
 
                 _subReplyState.value = current.copy(

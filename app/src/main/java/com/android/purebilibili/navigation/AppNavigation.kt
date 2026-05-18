@@ -1233,6 +1233,11 @@ fun AppNavigation(
                                     onDownloadClick = { navigateTo(ScreenRoutes.DownloadList.route) },
                                     onInboxClick = { navigateTo(ScreenRoutes.Inbox.route) },
                                     onStoryClick = { navigateToBottomPagerItem(BottomNavItem.STORY) },
+                                    onSpaceClick = { mid ->
+                                        if (canNavigate(false)) {
+                                            navController.navigate(ScreenRoutes.Space.createRoute(mid))
+                                        }
+                                    },
                                     globalHazeState = mainHazeState,
                                     predictiveStableBackRouteMotionEnabled =
                                         shouldUsePredictiveStableBackRouteMotion(backRouteMotionMode)
@@ -2794,7 +2799,9 @@ fun AppNavigation(
                 com.android.purebilibili.feature.space.SpaceScreen(
                     mid = mid,
                     onBack = { navController.popBackStack() },
-                    onVideoClick = { bvid -> navigateToVideo(bvid, 0L, "") },
+                    onVideoClick = { bvid, resumePositionMs ->
+                        navigateToVideo(bvid, 0L, "", resumePositionMs = resumePositionMs)
+                    },
                     onAudioClick = { sid ->
                         navController.navigate(ScreenRoutes.MusicDetail.createRoute(sid))
                     },
@@ -2806,8 +2813,14 @@ fun AppNavigation(
                     onWebClick = { url, title ->
                         navController.navigate(ScreenRoutes.Web.createRoute(url, title))
                     },
-                    onPlayAllAudioClick = { bvid ->
-                        navigateToVideo(bvid, 0L, "", startAudio = true)
+                    onPlayAllAudioClick = { bvid, resumePositionMs ->
+                        navigateToVideo(
+                            bvid,
+                            0L,
+                            "",
+                            startAudio = true,
+                            resumePositionMs = resumePositionMs
+                        )
                     },
                     onDynamicDetailClick = { dynamicId ->
                         navController.navigate(ScreenRoutes.DynamicDetail.createRoute(dynamicId))
