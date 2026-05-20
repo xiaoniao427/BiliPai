@@ -774,7 +774,10 @@ private fun SpaceContent(
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SpaceTopVideoCard(
                             video = topVideo,
-                            onClick = { playVideoFromSpace(topVideo.bvid) }
+                            onClick = { playVideoFromSpace(topVideo.bvid) },
+                            sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(topVideo.bvid),
+                            sharedTransitionScope = lazyGridSharedTransitionScope,
+                            animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                         )
                     }
                 }
@@ -803,7 +806,10 @@ private fun SpaceContent(
                         SpaceHomeVideoCard(
                             video = video,
                             progressState = resolveSpaceVideoProgressState(video, localProgressMs),
-                            onClick = { playVideoFromSpace(video.bvid) }
+                            onClick = { playVideoFromSpace(video.bvid) },
+                            sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(video.bvid),
+                            sharedTransitionScope = lazyGridSharedTransitionScope,
+                            animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                         )
                     }
                 }
@@ -856,7 +862,10 @@ private fun SpaceContent(
                                     onBangumiClick = onBangumiClick,
                                     onWebClick = onWebClick
                                 )
-                            }
+                            },
+                            sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(item.bvid),
+                            sharedTransitionScope = lazyGridSharedTransitionScope,
+                            animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                         )
                     }
                 }
@@ -880,7 +889,10 @@ private fun SpaceContent(
                                     onBangumiClick = onBangumiClick,
                                     onWebClick = onWebClick
                                 )
-                            }
+                            },
+                            sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(item.bvid),
+                            sharedTransitionScope = lazyGridSharedTransitionScope,
+                            animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                         )
                     }
                 }
@@ -984,7 +996,10 @@ private fun SpaceContent(
                                     onBangumiClick = onBangumiClick,
                                     onWebClick = onWebClick
                                 )
-                            }
+                            },
+                            sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(item.bvid),
+                            sharedTransitionScope = lazyGridSharedTransitionScope,
+                            animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                         )
                     }
                 }
@@ -1167,7 +1182,10 @@ private fun SpaceContent(
                                             video = video,
                                             progressState = resolveSpaceVideoProgressState(video, localProgressMs),
                                             badgeLabel = resolveSpaceVideoChargeBadgeLabel(video),
-                                            onClick = { playVideoFromSpace(video.bvid) }
+                                            onClick = { playVideoFromSpace(video.bvid) },
+                                            sharedTransitionKey = resolveSpaceArchiveSharedTransitionKey(video.bvid),
+                                            sharedTransitionScope = lazyGridSharedTransitionScope,
+                                            animatedVisibilityScope = lazyGridAnimatedVisibilityScope
                                         )
                                     }
                                     SpaceContributionVideoLayoutMode.SINGLE_COLUMN -> {
@@ -2383,23 +2401,104 @@ private fun SpaceSectionHeader(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun Modifier.spaceVideoCoverSharedBounds(
+    sharedTransitionKey: String? = null,
+    coverShape: RoundedCornerShape,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
+): Modifier {
+    val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
+    val cardSharedTransitionMotionSpec = remember(sourceRoute, sharedTransitionKey) {
+        resolveHomeVideoSharedTransitionMotionSpec(
+            sourceRoute = sourceRoute,
+            transitionEnabled = sharedTransitionKey != null
+        )
+    }
+    val sharedTransitionReady = sharedTransitionKey != null &&
+        sharedTransitionScope != null &&
+        animatedVisibilityScope != null
+    if (!sharedTransitionReady) return this
+    return with(requireNotNull(sharedTransitionScope)) {
+        this@spaceVideoCoverSharedBounds.sharedBounds(
+            sharedContentState = rememberSharedContentState(
+                key = videoCardShellSharedElementKey(
+                    bvid = requireNotNull(sharedTransitionKey),
+                    sourceRoute = sourceRoute
+                )
+            ),
+            animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+            boundsTransform = { _, _ ->
+                if (cardSharedTransitionMotionSpec.enabled) {
+                    tween(
+                        durationMillis = cardSharedTransitionMotionSpec.durationMillis,
+                        easing = cardSharedTransitionMotionSpec.easing
+                    )
+                } else {
+                    com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                }
+            },
+            clipInOverlayDuringTransition = OverlayClip(coverShape)
+        )
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SpaceHomeVideoCard(
     video: SpaceVideoItem,
     progressState: VideoProgressDisplayState,
     badgeLabel: String? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    sharedTransitionKey: String? = null,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = remember(configuration.screenWidthDp, density) {
+        with(density) { configuration.screenWidthDp.dp.toPx() }
+    }
+    val screenHeightPx = remember(configuration.screenHeightDp, density) {
+        with(density) { configuration.screenHeightDp.dp.toPx() }
+    }
+    val densityValue = density.density
+    val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
+    var coverBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val coverShape = RoundedCornerShape(14.dp)
+    val coverModifier = Modifier.spaceVideoCoverSharedBounds(
+        sharedTransitionKey = sharedTransitionKey,
+        coverShape = coverShape,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
+    )
+
     Column(
         modifier = Modifier
             .padding(horizontal = 8.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onClick() }
+            .clip(coverShape)
+            .clickable {
+                coverBounds?.let { bounds ->
+                    CardPositionManager.recordVideoCardPosition(
+                        bvid = sharedTransitionKey.orEmpty(),
+                        sourceRoute = sourceRoute,
+                        bounds = bounds,
+                        screenWidth = screenWidthPx,
+                        screenHeight = screenHeightPx,
+                        density = densityValue
+                    )
+                }
+                onClick()
+            }
     ) {
         Box(
-            modifier = Modifier
+            modifier = coverModifier
+                .onGloballyPositioned { coordinates ->
+                    coverBounds = coordinates.boundsInRoot()
+                }
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
+                .clip(coverShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             AsyncImage(
@@ -2490,22 +2589,60 @@ private fun SpaceHomeVideoCard(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SpaceAggregateMediaCard(
     item: SpaceAggregateArchiveItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    sharedTransitionKey: String? = null,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = remember(configuration.screenWidthDp, density) {
+        with(density) { configuration.screenWidthDp.dp.toPx() }
+    }
+    val screenHeightPx = remember(configuration.screenHeightDp, density) {
+        with(density) { configuration.screenHeightDp.dp.toPx() }
+    }
+    val densityValue = density.density
+    val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
+    var coverBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val coverShape = RoundedCornerShape(14.dp)
+    val coverModifier = Modifier.spaceVideoCoverSharedBounds(
+        sharedTransitionKey = sharedTransitionKey,
+        coverShape = coverShape,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
+    )
+
     Column(
         modifier = Modifier
             .padding(horizontal = 8.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onClick() }
+            .clip(coverShape)
+            .clickable {
+                coverBounds?.let { bounds ->
+                    CardPositionManager.recordVideoCardPosition(
+                        bvid = sharedTransitionKey.orEmpty(),
+                        sourceRoute = sourceRoute,
+                        bounds = bounds,
+                        screenWidth = screenWidthPx,
+                        screenHeight = screenHeightPx,
+                        density = densityValue
+                    )
+                }
+                onClick()
+            }
     ) {
         Box(
-            modifier = Modifier
+            modifier = coverModifier
+                .onGloballyPositioned { coordinates ->
+                    coverBounds = coordinates.boundsInRoot()
+                }
                 .fillMaxWidth()
                 .height(118.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(coverShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             AsyncImage(
@@ -2600,18 +2737,53 @@ private fun SpaceAggregatePosterCard(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SpaceTopVideoCard(
     video: SpaceTopArcData,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    sharedTransitionKey: String? = null,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = remember(configuration.screenWidthDp, density) {
+        with(density) { configuration.screenWidthDp.dp.toPx() }
+    }
+    val screenHeightPx = remember(configuration.screenHeightDp, density) {
+        with(density) { configuration.screenHeightDp.dp.toPx() }
+    }
+    val densityValue = density.density
+    val sourceRoute = LocalVideoCardSharedElementSourceRoute.current
+    var coverBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val coverShape = RoundedCornerShape(12.dp)
+    val coverModifier = Modifier.spaceVideoCoverSharedBounds(
+        sharedTransitionKey = sharedTransitionKey,
+        coverShape = coverShape,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
+    )
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-            .clickable { onClick() }
+            .clickable {
+                coverBounds?.let { bounds ->
+                    CardPositionManager.recordVideoCardPosition(
+                        bvid = sharedTransitionKey.orEmpty(),
+                        sourceRoute = sourceRoute,
+                        bounds = bounds,
+                        screenWidth = screenWidthPx,
+                        screenHeight = screenHeightPx,
+                        density = densityValue
+                    )
+                }
+                onClick()
+            }
             .padding(14.dp)
     ) {
         Text(
@@ -2623,10 +2795,13 @@ private fun SpaceTopVideoCard(
         Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
-                modifier = Modifier
+                modifier = coverModifier
+                    .onGloballyPositioned { coordinates ->
+                        coverBounds = coordinates.boundsInRoot()
+                    }
                     .width(144.dp)
                     .height(90.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(coverShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 AsyncImage(

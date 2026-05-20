@@ -30,6 +30,15 @@ class BiliPaiNavDisplayHostStructureTest {
     }
 
     @Test
+    fun navDisplayHostPreservesApplicationExtrasForEntryViewModels() {
+        val source = navDisplayHostSource()
+
+        assertTrue(source.contains("ProvideNavigation3ViewModelApplicationExtras("))
+        assertTrue(source.contains("LocalViewModelStoreOwner provides patchedOwner"))
+        assertTrue(source.contains("APPLICATION_KEY"))
+    }
+
+    @Test
     fun classicBackInterceptorIsComposedAfterNavDisplay() {
         val source = navDisplayHostSource()
 

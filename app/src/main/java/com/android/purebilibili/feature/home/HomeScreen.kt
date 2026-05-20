@@ -1497,6 +1497,11 @@ fun HomeScreen(
         
         // Calculate parameters based on scroll
         // 1. Search Bar Collapse (First phase)
+        val topTabsCollapsedForHeader = if (isHeaderCollapseEnabled) {
+            areTopTabsAutoCollapsed
+        } else {
+            areTopTabsManuallyCollapsed
+        }
         iOSHomeHeader(
             headerOffsetProvider = { headerOffsetHeightPx }, // [Optimization] Pass lambda to defer state read
             isHeaderCollapseEnabled = isHeaderCollapseEnabled,
@@ -1562,13 +1567,10 @@ fun HomeScreen(
             topTabsVisible = resolveHomeTopTabsVisible(
                 isDelayedForCardSettle = delayTopTabsUntilCardSettled,
                 isForwardNavigatingToDetail = hideTopTabsForForwardDetailNav,
-                isReturningFromDetail = isReturningFromVideoDetail
+                isReturningFromDetail = isReturningFromVideoDetail,
+                topTabsCollapsed = topTabsCollapsedForHeader
             ),
-            topTabsCollapsed = if (isHeaderCollapseEnabled) {
-                areTopTabsAutoCollapsed
-            } else {
-                areTopTabsManuallyCollapsed
-            },
+            topTabsCollapsed = topTabsCollapsedForHeader,
             onTopTabsCollapsedChange = { collapsed ->
                 if (!isHeaderCollapseEnabled) {
                     areTopTabsManuallyCollapsed = collapsed

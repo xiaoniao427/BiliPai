@@ -108,6 +108,17 @@ internal fun shouldInterceptSystemBackForNavigation3(
     return mode == BiliPaiNavMotionMode.CLASSIC_CARD
 }
 
+internal fun shouldUseClassicBackForVideoSharedElementReturn(
+    currentKey: BiliPaiNavKey?,
+    previousKey: BiliPaiNavKey?,
+    cardTransitionEnabled: Boolean
+): Boolean {
+    return cardTransitionEnabled &&
+        currentKey is BiliPaiNavKey.VideoDetail &&
+        previousKey != null &&
+        isCardReturnTargetNavKey(previousKey)
+}
+
 internal fun shouldUseNavigation3PredictivePop(mode: BiliPaiNavMotionMode): Boolean {
     return mode == BiliPaiNavMotionMode.PREDICTIVE_STABLE
 }

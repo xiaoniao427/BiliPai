@@ -40,6 +40,7 @@ import coil.compose.AsyncImage
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.videoCardReturnRebound
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedElementKey
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.ArchiveMajor
@@ -90,6 +91,10 @@ fun VideoCardLarge(
     }
 
     var modifier = Modifier
+        .videoCardReturnRebound(
+            bvid = archive.bvid,
+            sourceRoute = sourceRoute
+        )
         .fillMaxWidth()
         .onGloballyPositioned { coordinates ->
             cardBoundsRef.value = coordinates.boundsInRoot()

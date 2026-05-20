@@ -56,6 +56,7 @@ import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveHomeVideoSharedTransitionMotionSpec
+import com.android.purebilibili.core.ui.transition.videoCardReturnRebound
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedElementKey
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
 import com.android.purebilibili.feature.home.rememberHomeGlassPillColors
@@ -235,6 +236,10 @@ fun GlassVideoCard(
 
     Box(
         modifier = cardModifier
+            .videoCardReturnRebound(
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute
+            )
             .fillMaxWidth()
             .padding(6.dp)
             //  [修复] 进场动画 - 使用 Unit 作为 key，避免分类切换时重新动画

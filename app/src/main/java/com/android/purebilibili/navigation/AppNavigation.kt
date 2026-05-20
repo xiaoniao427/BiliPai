@@ -134,6 +134,7 @@ import com.android.purebilibili.navigation3.resolveBiliPaiNavSourceMetadata
 import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
 import com.android.purebilibili.navigation3.shouldInterceptSystemBackForNavigation3
+import com.android.purebilibili.navigation3.shouldUseClassicBackForVideoSharedElementReturn
 import com.android.purebilibili.navigation3.shouldUseNavigation3PredictivePop
 import com.android.purebilibili.navigation3.toLegacyRoute
 import androidx.compose.ui.Alignment
@@ -569,14 +570,28 @@ fun AppNavigation(
             }
         }
         val navigation3SourceMetadata = currentNavigation3SourceMetadata()
+        val previousNavigation3Key = navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
+        val shouldInterceptVideoSharedElementReturn = remember(
+            cardTransitionEnabled,
+            currentNavigation3Key,
+            previousNavigation3Key
+        ) {
+            shouldUseClassicBackForVideoSharedElementReturn(
+                currentKey = currentNavigation3Key,
+                previousKey = previousNavigation3Key,
+                cardTransitionEnabled = cardTransitionEnabled
+            )
+        }
         val shouldInterceptSystemBack = remember(
             predictiveBackAnimationEnabled,
             cardTransitionEnabled,
-            systemBackAction
+            systemBackAction,
+            shouldInterceptVideoSharedElementReturn
         ) {
             shouldInterceptSystemBackForNavigation3(
                 mode = navigation3MotionMode,
                 appBackActionRequiresInterception =
+                    shouldInterceptVideoSharedElementReturn ||
                     systemBackAction == AppSystemBackAction.RETURN_TO_HOME_TAB ||
                         (!predictiveBackAnimationEnabled && systemBackAction == AppSystemBackAction.NAVIGATE_UP)
             )
@@ -835,10 +850,25 @@ fun AppNavigation(
             com.android.purebilibili.feature.home.LocalHomeFeedScrollInProgress provides
                 homeFeedScrollInProgressState
         ) {
+            fun markNavigation3VideoReturnBeforeBackAction(targetKey: BiliPaiNavKey?) {
+                if (!cardTransitionEnabled) return
+                val fromRoute = navigation3BackStack.lastOrNull()?.toLegacyRoute()
+                val targetRoute = targetKey?.toLegacyRoute()
+                if (isVideoDetailRoute(fromRoute) && isVideoCardReturnTargetRoute(targetRoute)) {
+                    navigation3ReturnSession =
+                        navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
+                }
+            }
+
             val performSystemBackAction = {
                 when (systemBackAction) {
-                    AppSystemBackAction.RETURN_TO_HOME_TAB -> pushNavigation3Key(BiliPaiNavKey.Home)
+                    AppSystemBackAction.RETURN_TO_HOME_TAB -> {
+                        markNavigation3VideoReturnBeforeBackAction(targetKey = BiliPaiNavKey.Home)
+                        pushNavigation3Key(BiliPaiNavKey.Home)
+                    }
                     AppSystemBackAction.NAVIGATE_UP -> {
+                        val previousKey = navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
+                        markNavigation3VideoReturnBeforeBackAction(targetKey = previousKey)
                         navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)
                     }
                     AppSystemBackAction.FINISH_ACTIVITY -> context.findActivity()?.finish()

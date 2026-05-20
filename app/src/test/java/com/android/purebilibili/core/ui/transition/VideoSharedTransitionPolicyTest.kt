@@ -132,17 +132,29 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun detailContentReveal_usesLightVisibleMotionForHomeSharedTransition() {
+    fun detailContentReveal_disabledForHomeSharedTransitionShellMode() {
+        // shell sharedBounds 接管整体 morph，详情内容不再单独 fade/slide。
         val motion = resolveVideoDetailContentRevealMotion(
             sourceRoute = "home",
             transitionEnabled = true
         )
 
-        assertTrue(motion.enabled)
-        assertEquals(40, motion.delayMillis)
-        assertEquals(220, motion.durationMillis)
-        assertEquals(14, motion.slideOffsetDp)
-        assertEquals(0.985f, motion.initialScale, 0.0001f)
+        assertFalse(motion.enabled)
+        assertEquals(0, motion.delayMillis)
+        assertEquals(0, motion.durationMillis)
+        assertEquals(0, motion.slideOffsetDp)
+        assertEquals(1f, motion.initialScale, 0.0001f)
+    }
+
+    @Test
+    fun detailContentReveal_disabledForAnySourceRouteUnderShellMode() {
+        // 非首页源（search/dynamic 等）也走 shell sharedBounds，同样不允许二级 reveal。
+        val motion = resolveVideoDetailContentRevealMotion(
+            sourceRoute = "search",
+            transitionEnabled = true
+        )
+
+        assertFalse(motion.enabled)
     }
 
     @Test
@@ -177,8 +189,10 @@ class VideoSharedTransitionPolicyTest {
     fun returnRebound_usesFastOutSlowFinishCurve() {
         val rebound = resolveVideoCardReturnReboundSpec(enabled = true)
 
-        assertTrue(rebound.easing.transform(0.35f) > 0.7f)
-        assertTrue(rebound.easing.transform(0.75f) > 0.96f)
+        assertEquals(0.984f, rebound.startScale, 0.0001f)
+        assertEquals(2.25f, rebound.startTranslationYDp, 0.0001f)
+        assertEquals(0.64f, rebound.dampingRatio, 0.0001f)
+        assertEquals(520f, rebound.stiffness, 0.0001f)
     }
 
     @Test

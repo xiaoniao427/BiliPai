@@ -55,6 +55,7 @@ import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RAT
 import com.android.purebilibili.core.ui.transition.resolveHomeVideoSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
+import com.android.purebilibili.core.ui.transition.videoCardReturnRebound
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedElementKey
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
 import com.android.purebilibili.feature.video.ui.section.resolvePublishTimeRowText
@@ -242,6 +243,10 @@ fun StoryVideoCard(
 
     Column(
         modifier = Modifier
+            .videoCardReturnRebound(
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute
+            )
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             //  [修复] 进场动画 - 使用 Unit 作为 key，避免分类切换时重新动画

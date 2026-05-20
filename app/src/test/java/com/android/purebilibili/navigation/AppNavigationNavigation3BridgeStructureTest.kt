@@ -42,6 +42,34 @@ class AppNavigationNavigation3BridgeStructureTest {
     }
 
     @Test
+    fun classicBackMarksVideoReturnBeforePoppingNavigation3Stack() {
+        val source = appNavigationSource()
+
+        val markerIndex = source.indexOf("fun markNavigation3VideoReturnBeforeBackAction")
+        val navigateUpIndex = source.indexOf("AppSystemBackAction.NAVIGATE_UP ->")
+        val markCallIndex = source.indexOf("markNavigation3VideoReturnBeforeBackAction(targetKey = previousKey)")
+        val popIndex = source.indexOf("navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)", navigateUpIndex)
+
+        assertTrue(markerIndex >= 0)
+        assertTrue(markCallIndex in navigateUpIndex until popIndex)
+        assertTrue(source.contains("isVideoDetailRoute(fromRoute)"))
+        assertTrue(source.contains("isVideoCardReturnTargetRoute(targetRoute)"))
+    }
+
+    @Test
+    fun predictiveVideoSharedElementReturnUsesClassicBackInterception() {
+        val source = appNavigationSource()
+
+        val interceptIndex = source.indexOf("val shouldInterceptVideoSharedElementReturn")
+        val systemBackIndex = source.indexOf("val shouldInterceptSystemBack = remember(")
+
+        assertTrue(interceptIndex >= 0)
+        assertTrue(systemBackIndex > interceptIndex)
+        assertTrue(source.contains("shouldUseClassicBackForVideoSharedElementReturn("))
+        assertTrue(source.contains("shouldInterceptVideoSharedElementReturn ||"))
+    }
+
+    @Test
     fun cardPositionManagerKeepsOnlyGeometryFallbackState() {
         val source = productionSourceExceptCardPositionManager()
 

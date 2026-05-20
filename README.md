@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-8.3.5-007AFF?style=flat-square&labelColor=ffffff" alt="Version 8.3.5" />
+  <img src="https://img.shields.io/badge/Version-8.3.6-007AFF?style=flat-square&labelColor=ffffff" alt="Version 8.3.6" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
@@ -179,13 +179,13 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `8.3.5 / versionCode 199`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v8.3.5`：
+当前仓库版本号已更新到 `8.3.6 / versionCode 200`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v8.3.6`：
 
-- 修复空间动态长图文正文、评论数量、封面图片和 `/opus/` 全文跳转，减少 TDS 等 UP 空间图文卡片空白或误跳转。
-- 评论按钮在手机窄槽位也保留非 0 数量，打开评论时按列表页统计选择更匹配的评论区候选。
-- 修复空间页 LazyGrid 共享过渡崩溃、合集外层内容为空，并补充充电视频/充电动态提示。
-- 修复观看历史 UP 跳转，搜索列表补充分页加载策略，减少搜索结果只显示首屏的问题。
-- 补齐空间动态模型解析、动态接口契约、评论候选选择、操作按钮、空间页和列表搜索等回归测试。
+- 修复视频详情共享元素返回首页时的 UI 错位，预测式返回开关开/关时都保持同一条卡片返回状态链路。
+- 修复历史、动态、空间等 Navigation3 页面点击时因 ViewModel 缺少 Application extras 导致的闪退。
+- 优化视频详情展开与返回收尾，移除 sharedBounds 期间额外内容 reveal，并为返回目标卡片加入更明显但克制的 spring 回弹。
+- 补齐 UP 主空间置顶视频、主页视频、投稿视频、聚合视频和动态视频卡片的共享元素进入/返回动画。
+- 补齐 Navigation3、共享元素、空间页高频卡片和返回回弹参数等回归测试。
 
 ## 路线图
 

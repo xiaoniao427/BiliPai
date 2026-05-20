@@ -2,7 +2,6 @@ package com.android.purebilibili.core.ui.transition
 
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
-import com.android.purebilibili.core.ui.motion.resolveDetailVerticalContentRevealMotionSpec
 
 internal enum class VideoSharedTransitionProfile {
     COVER_ONLY,
@@ -18,6 +17,10 @@ private const val HOME_DETAIL_REVEAL_SLIDE_OFFSET_DP = 14
 private const val HOME_DETAIL_REVEAL_INITIAL_SCALE = 0.985f
 private const val HOME_SHARED_TRANSITION_CARD_CORNER_DP = 16
 private const val HOME_SHARED_TRANSITION_PLAYER_CORNER_DP = 12
+private const val VIDEO_CARD_RETURN_REBOUND_START_SCALE = 0.984f
+private const val VIDEO_CARD_RETURN_REBOUND_TRANSLATION_Y_DP = 2.25f
+private const val VIDEO_CARD_RETURN_REBOUND_DAMPING_RATIO = 0.64f
+private const val VIDEO_CARD_RETURN_REBOUND_STIFFNESS = 520f
 private val VIDEO_CARD_IOS_LIKE_EASE_OUT = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 
 internal data class VideoSharedTransitionOwnership(
@@ -54,6 +57,8 @@ internal data class VideoCardReturnReboundSpec(
     val durationMillis: Int,
     val startScale: Float,
     val startTranslationYDp: Float,
+    val dampingRatio: Float,
+    val stiffness: Float,
     val easing: Easing
 )
 
@@ -176,34 +181,15 @@ internal fun resolveVideoDetailContentRevealMotion(
     sourceRoute: String?,
     transitionEnabled: Boolean
 ): VideoDetailContentRevealMotion {
-    val homeMotionSpec = resolveHomeVideoSharedTransitionMotionSpec(
-        sourceRoute = sourceRoute,
-        transitionEnabled = transitionEnabled
-    )
-    val isHomeSharedTransition = homeMotionSpec.enabled
-    if (!isHomeSharedTransition) {
-        return VideoDetailContentRevealMotion(
-            enabled = false,
-            delayMillis = 0,
-            durationMillis = 0,
-            slideOffsetDp = 0,
-            initialScale = 1f
-        )
-    }
-
-    val revealMotion = resolveDetailVerticalContentRevealMotionSpec(
-        delayMillis = homeMotionSpec.contentDelayMillis,
-        durationMillis = homeMotionSpec.contentDurationMillis,
-        slideOffsetDp = homeMotionSpec.contentSlideOffsetDp.toFloat(),
-        initialScale = homeMotionSpec.contentInitialScale
-    )
-
+    // shell sharedBounds 接管整张卡片 ↔ 详情页的整体 morph；
+    // 详情内容不再单独做 fade/slide，避免与共享元素形变抢戏导致撕裂。
+    // 非共享元素路径（无 sourceRoute / 禁用过渡）也无需 reveal —— 由调用方自身的 fallback 转场处理。
     return VideoDetailContentRevealMotion(
-        enabled = true,
-        delayMillis = revealMotion.delayMillis,
-        durationMillis = revealMotion.durationMillis,
-        slideOffsetDp = revealMotion.slideOffsetDp.toInt(),
-        initialScale = revealMotion.initialScale
+        enabled = false,
+        delayMillis = 0,
+        durationMillis = 0,
+        slideOffsetDp = 0,
+        initialScale = 1f
     )
 }
 
@@ -231,8 +217,10 @@ internal fun resolveVideoCardReturnReboundSpec(
         VideoCardReturnReboundSpec(
             enabled = true,
             durationMillis = 150,
-            startScale = 0.985f,
-            startTranslationYDp = 1.5f,
+            startScale = VIDEO_CARD_RETURN_REBOUND_START_SCALE,
+            startTranslationYDp = VIDEO_CARD_RETURN_REBOUND_TRANSLATION_Y_DP,
+            dampingRatio = VIDEO_CARD_RETURN_REBOUND_DAMPING_RATIO,
+            stiffness = VIDEO_CARD_RETURN_REBOUND_STIFFNESS,
             easing = VIDEO_CARD_IOS_LIKE_EASE_OUT
         )
     } else {
@@ -241,6 +229,8 @@ internal fun resolveVideoCardReturnReboundSpec(
             durationMillis = 0,
             startScale = 1f,
             startTranslationYDp = 0f,
+            dampingRatio = 1f,
+            stiffness = 0f,
             easing = VIDEO_CARD_IOS_LIKE_EASE_OUT
         )
     }

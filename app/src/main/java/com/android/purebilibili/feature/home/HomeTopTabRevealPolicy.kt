@@ -5,15 +5,17 @@ fun resolveHomeTopTabsRevealDelayMs(
     cardTransitionEnabled: Boolean,
     isQuickReturnFromDetail: Boolean
 ): Long {
-    // 返回首页时顶部标签页全程可见，不再做延迟隐藏。
+    // 返回首页不再做额外延迟；是否可见由当前折叠态统一裁决，避免下滑隐藏后返场闪现。
     return 0L
 }
 
 fun resolveHomeTopTabsVisible(
     isDelayedForCardSettle: Boolean,
     isForwardNavigatingToDetail: Boolean,
-    isReturningFromDetail: Boolean
+    isReturningFromDetail: Boolean,
+    topTabsCollapsed: Boolean = false
 ): Boolean {
+    if (topTabsCollapsed) return false
     if (isReturningFromDetail) return true
     return !isDelayedForCardSettle && !isForwardNavigatingToDetail
 }

@@ -65,6 +65,7 @@ import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RAT
 import com.android.purebilibili.core.ui.transition.resolveHomeVideoSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
+import com.android.purebilibili.core.ui.transition.videoCardReturnRebound
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedElementKey
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.core.util.FormatUtils
@@ -184,6 +185,10 @@ fun CinematicVideoCard(
 
     Box(
         modifier = Modifier
+            .videoCardReturnRebound(
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute
+            )
             .fillMaxWidth()
             .padding(bottom = 24.dp, start = 16.dp, end = 16.dp) // 增加间距
             .animateEnter(

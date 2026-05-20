@@ -44,6 +44,38 @@ class BiliPaiNavMotionPolicyTest {
     }
 
     @Test
+    fun videoSharedElementReturn_usesClassicAppBackEvenWhenPredictiveIsEnabled() {
+        assertTrue(
+            shouldUseClassicBackForVideoSharedElementReturn(
+                currentKey = BiliPaiNavKey.VideoDetail("BV1", sourceRoute = "home"),
+                previousKey = BiliPaiNavKey.Home,
+                cardTransitionEnabled = true
+            )
+        )
+        assertTrue(
+            shouldUseClassicBackForVideoSharedElementReturn(
+                currentKey = BiliPaiNavKey.VideoDetail("BV1", sourceRoute = "dynamic"),
+                previousKey = BiliPaiNavKey.Dynamic,
+                cardTransitionEnabled = true
+            )
+        )
+        assertFalse(
+            shouldUseClassicBackForVideoSharedElementReturn(
+                currentKey = BiliPaiNavKey.VideoDetail("BV1", sourceRoute = "home"),
+                previousKey = BiliPaiNavKey.Home,
+                cardTransitionEnabled = false
+            )
+        )
+        assertFalse(
+            shouldUseClassicBackForVideoSharedElementReturn(
+                currentKey = BiliPaiNavKey.Settings,
+                previousKey = BiliPaiNavKey.Home,
+                cardTransitionEnabled = true
+            )
+        )
+    }
+
+    @Test
     fun navDisplayPredictivePop_sharedReadyVideoReturn_keepsRouteLayerNoOp() {
         val transition = resolveBiliPaiNavDisplayPredictivePopRouteTransition(
             motionMode = BiliPaiNavMotionMode.PREDICTIVE_STABLE,

@@ -1,5 +1,29 @@
 # Changelog
 
+## v8.3.6 (2026-05-21)
+
+### 版本信息
+- 版本号从 `8.3.5` 升级到 `8.3.6`，`versionCode` 升级到 `200`。
+- 本次为“视频详情共享元素返回、预测式返回开关一致性、空间/动态高频卡片过渡、Navigation3 稳定性”的维护更新，汇总 8.3.5 到 8.3.6 的全部改动。
+
+### 更新内容
+- **视频详情返回首页稳定性**：修复关闭“应用内预测式返回动画”、开启共享元素动画后，从视频详情返回首页时出现内容层和底部导航错位的问题；视频详情返回卡片源页面时会优先走应用内 classic back 记录链路，确保返回源、卡片位置和共享元素状态一致。
+- **预测式返回与共享元素一致性**：开启预测式返回动画时，视频详情到首页、历史、动态、空间等卡片来源页的共享元素返回不再和系统 predictive pop 抢同一段转场；共享元素 ready 时路由层保持 no-op，由卡片/播放器共享元素承担主要形变。
+- **历史、动态等页面点击闪退修复**：为 Navigation3 页面内容补齐 `APPLICATION_KEY` 的 ViewModel 创建 extras，修复点击历史、动态、空间等页面时部分 AndroidViewModel / ViewModel 创建路径因缺少 Application extras 导致的闪退。
+- **视频详情展开收尾优化**：详情页内容不再在 sharedBounds 接管整张卡片到详情页 morph 时额外叠加 fade/slide reveal，减少播放器、标题和正文在共享元素结束阶段互相抢动画造成的撕裂感。
+- **返回卡片物理回弹**：新增统一的返回目标卡片回弹 Modifier，首页普通卡、故事卡、玻璃卡、影院卡和动态视频卡在匹配共享元素返回时都会有轻微 scale / translationY spring 收尾；回弹参数调整为更容易被用户感知但不过度弹跳的 `scale 0.984`、`Y 2.25dp`、`damping 0.64`、`stiffness 520`。
+- **UP 主空间共享元素补齐**：空间页 LazyGrid 共享元素门禁改为在 shared scope 与 animated visibility scope 同时存在时启用；置顶视频、主页视频、投稿网格视频、投稿单列视频和主页聚合视频会记录卡片位置并使用统一的 `videoCardShellSharedElementKey`，让 UP 主空间等高频入口进入/返回视频详情时也有共享元素动画。
+- **动态视频卡片回弹补齐**：动态页视频卡片接入统一返回回弹，视频详情返回动态来源卡片时收尾手感和首页保持一致。
+- **版本与文档同步**：版本号升级到 `8.3.6` / `versionCode 200`，README、README_EN 和更新日志同步到 8.3.6。
+- **回归覆盖**：新增或更新 Navigation3 ViewModel extras、预测式返回 classic back 拦截、共享元素路由 no-op、返回卡片回弹参数、空间页共享元素门禁和空间页高频视频卡 sharedBounds 等结构/策略测试。
+
+### 验证
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.core.ui.transition.VideoSharedTransitionPolicyTest' --tests 'com.android.purebilibili.feature.space.SpaceLoadPolicyTest' --tests 'com.android.purebilibili.feature.space.SpaceScreenStructureTest'`
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.feature.space.SpaceLoadPolicyTest' --tests 'com.android.purebilibili.feature.space.SpaceScreenStructureTest' --tests 'com.android.purebilibili.navigation3.BiliPaiNavEntryProviderPolicyTest' --tests 'com.android.purebilibili.navigation3.BiliPaiNavMotionPolicyTest'`
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.navigation3.BiliPaiNavDisplayHostStructureTest'`
+- `./gradlew :app:compileDebugKotlin`
+- `git diff --check`
+
 ## v8.3.5 (2026-05-20)
 
 ### 版本信息

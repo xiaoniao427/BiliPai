@@ -573,12 +573,16 @@ private fun lerpVideoDetailFloat(start: Float, stop: Float, fraction: Float): Fl
 @Composable
 private fun rememberVideoDetailRouteSheetFrame(
     motion: VideoDetailRouteSheetMotion,
-    isExitTransitionInProgress: Boolean
+    isExitTransitionInProgress: Boolean,
+    sharedBoundsActive: Boolean = false
 ): VideoDetailRouteSheetFrame {
-    val routeSheetProgress = remember(motion.enabled) {
-        Animatable(if (motion.enabled) 0f else 1f)
+    // shell sharedBounds 接管整张详情壳的 morph 时，sheet 自身的 scale/translation/corner/scrim
+    // 必须全部停摆——否则会与共享元素同时形变导致撕裂。等价于 motion.enabled = false。
+    val effectiveMotion = if (sharedBoundsActive) motion.copy(enabled = false) else motion
+    val routeSheetProgress = remember(effectiveMotion.enabled) {
+        Animatable(if (effectiveMotion.enabled) 0f else 1f)
     }
-    val routeSheetSettleProgress = remember(motion.enabled) {
+    val routeSheetSettleProgress = remember(effectiveMotion.enabled) {
         Animatable(0f)
     }
     var settleDirection by remember {
@@ -586,12 +590,12 @@ private fun rememberVideoDetailRouteSheetFrame(
     }
 
     LaunchedEffect(
-        motion.enabled,
-        motion.mainDurationMillis,
-        motion.settleDurationMillis,
+        effectiveMotion.enabled,
+        effectiveMotion.mainDurationMillis,
+        effectiveMotion.settleDurationMillis,
         isExitTransitionInProgress
     ) {
-        if (!motion.enabled) {
+        if (!effectiveMotion.enabled) {
             settleDirection = VideoDetailRouteSheetSettleDirection.None
             routeSheetSettleProgress.snapTo(0f)
             routeSheetProgress.snapTo(1f)
@@ -604,8 +608,8 @@ private fun rememberVideoDetailRouteSheetFrame(
         routeSheetProgress.animateTo(
             targetValue = targetProgress,
             animationSpec = tween(
-                durationMillis = motion.mainDurationMillis,
-                easing = motion.easing
+                durationMillis = effectiveMotion.mainDurationMillis,
+                easing = effectiveMotion.easing
             )
         )
         settleDirection = if (isExitTransitionInProgress) {
@@ -617,8 +621,8 @@ private fun rememberVideoDetailRouteSheetFrame(
         routeSheetSettleProgress.animateTo(
             targetValue = 0f,
             animationSpec = tween(
-                durationMillis = motion.settleDurationMillis,
-                easing = motion.easing
+                durationMillis = effectiveMotion.settleDurationMillis,
+                easing = effectiveMotion.easing
             )
         )
         settleDirection = VideoDetailRouteSheetSettleDirection.None
@@ -628,13 +632,13 @@ private fun rememberVideoDetailRouteSheetFrame(
         routeSheetProgress.value,
         routeSheetSettleProgress.value,
         settleDirection,
-        motion
+        effectiveMotion
     ) {
         resolveVideoDetailRouteSheetFrame(
             rawProgress = routeSheetProgress.value,
             settleProgress = routeSheetSettleProgress.value,
             settleDirection = settleDirection,
-            motion = motion
+            motion = effectiveMotion
         )
     }
 }
@@ -1057,13 +1061,22 @@ fun VideoDetailScreen(
     }
     
     // 🎭 [性能优化] 进场视觉帧 + 重型组件延迟加载
-    var isTransitionFinished by remember { mutableStateOf(!transitionEnabled) }
+    // shell sharedBounds 接管整体 morph 时，内容必须从第一帧就处在最终布局，
+    // 不能再走 isTransitionFinished 门控触发的二级 fadeIn / slide / shrink。
+    val shellSharedBoundsLikely = transitionEnabled && !sourceRouteForSharedElement.isNullOrBlank()
+    var isTransitionFinished by remember {
+        mutableStateOf(!transitionEnabled || shellSharedBoundsLikely)
+    }
     val entryVisualProgress = remember(transitionEnabled) {
         Animatable(if (transitionEnabled) 0f else 1f)
     }
 
-    LaunchedEffect(transitionEnabled, motionSpec.entryPhaseDurationMillis) {
-        if (!transitionEnabled) {
+    LaunchedEffect(
+        transitionEnabled,
+        motionSpec.entryPhaseDurationMillis,
+        shellSharedBoundsLikely
+    ) {
+        if (!transitionEnabled || shellSharedBoundsLikely) {
             entryVisualProgress.snapTo(1f)
             isTransitionFinished = true
             return@LaunchedEffect
@@ -1434,16 +1447,17 @@ fun VideoDetailScreen(
     val rootAnimatedVisibilityScope = LocalAnimatedVisibilityScope.current
     val isExitTransitionInProgress =
         rootAnimatedVisibilityScope?.transition?.targetState == EnterExitState.PostExit
-    val routeSheetFrame = rememberVideoDetailRouteSheetFrame(
-        motion = routeSheetMotion,
-        isExitTransitionInProgress = isExitTransitionInProgress
-    )
     val rootSharedTransitionScope = LocalSharedTransitionScope.current
     val detailShellSharedBoundsEnabled = shouldEnableVideoCoverSharedTransition(
         transitionEnabled = transitionEnabled,
         hasSharedTransitionScope = rootSharedTransitionScope != null,
         hasAnimatedVisibilityScope = rootAnimatedVisibilityScope != null
     ) && !sourceRouteForSharedElement.isNullOrBlank()
+    val routeSheetFrame = rememberVideoDetailRouteSheetFrame(
+        motion = routeSheetMotion,
+        isExitTransitionInProgress = isExitTransitionInProgress,
+        sharedBoundsActive = detailShellSharedBoundsEnabled
+    )
     val detailShellModifier = if (detailShellSharedBoundsEnabled) {
         with(requireNotNull(rootSharedTransitionScope)) {
             Modifier.sharedBounds(
@@ -3001,12 +3015,14 @@ fun VideoDetailScreen(
                     )
                     
                     //  为播放器容器添加共享元素标记（受开关控制）
+                    // shell sharedBounds 锚定整张详情壳时，cover 不再单独参与共享元素，
+                    // 避免两枚 sharedBounds 在重叠区域抢同一帧布局导致撕裂。
                     val playerContainerModifier = if (
                         shouldEnableVideoCoverSharedTransition(
                             transitionEnabled = transitionEnabled,
                             hasSharedTransitionScope = sharedTransitionScope != null,
                             hasAnimatedVisibilityScope = animatedVisibilityScope != null
-                        ) && !forceCoverOnlyForReturn
+                        ) && !forceCoverOnlyForReturn && !detailShellSharedBoundsEnabled
                     ) {
                         with(requireNotNull(sharedTransitionScope)) {
                             Modifier

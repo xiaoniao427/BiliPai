@@ -137,8 +137,8 @@ class SpaceLoadPolicyTest {
     }
 
     @Test
-    fun shouldEnableSpaceLazyGridSharedTransition_disablesSharedBoundsInsideLazyGrid() {
-        assertFalse(
+    fun shouldEnableSpaceLazyGridSharedTransition_requiresBothScopes() {
+        assertTrue(
             shouldEnableSpaceLazyGridSharedTransition(
                 hasSharedTransitionScope = true,
                 hasAnimatedVisibilityScope = true

@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <sub>Last updated: 2026-05-20 · Synced to v8.3.5 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
+  <sub>Last updated: 2026-05-21 · Synced to v8.3.6 (source of truth: <a href="CHANGELOG.md">CHANGELOG</a> + code)</sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-8.3.5-fb7299?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-8.3.6-fb7299?style=flat-square" alt="Version">
   <img src="https://img.shields.io/github/stars/jay3-yy/BiliPai?style=flat-square&color=yellow" alt="Stars">
   <img src="https://img.shields.io/github/forks/jay3-yy/BiliPai?style=flat-square&color=green" alt="Forks">
   <img src="https://img.shields.io/github/last-commit/jay3-yy/BiliPai?style=flat-square&color=purple" alt="Last Commit">
@@ -432,14 +432,14 @@ A lightweight plugin format requiring **no coding**, just a simple JSON file to 
 
 See full changelog: [CHANGELOG.md](CHANGELOG.md)
 
-### Latest (v8.3.5 · 2026-05-20)
+### Latest (v8.3.6 · 2026-05-21)
 
-- Fixed Space dynamic long-article cards so text, comment counts, cover images, and `/opus/` full-detail navigation work for TDS-style posts.
-- Kept non-zero comment counts visible on compact mobile action buttons, and selected the comment target that best matches the feed-side count.
-- Fixed Space LazyGrid shared-transition crashes, empty outer collection content, and charge-video / charge-dynamic badges.
-- Fixed UP navigation from watch history and added paginated search-result loading.
-- Added or updated regression coverage for Space dynamic parsing, dynamic API contracts, comment-target selection, action buttons, Space screens, and search pagination.
-- Bumped the app to `8.3.5` with `versionCode` `199`.
+- Fixed shared-element returns from video detail so returning to Home no longer leaves the UI misaligned when predictive-back animation is disabled.
+- Kept video-card shared-element returns on the app back pipeline even when predictive-back animation is enabled, avoiding route-layer and shared-element animation conflicts.
+- Fixed Navigation3 ViewModel creation extras so History, Dynamic, Space, and similar pages no longer crash when opening ViewModel-backed content.
+- Added a perceptible but restrained spring rebound to matched return cards across Home and Dynamic video cards.
+- Extended shared-element video transitions to high-frequency Space surfaces, including pinned videos, home videos, contribution videos, and aggregate video cards.
+- Bumped the app to `8.3.6` with `versionCode` `200`.
 
 ---
 
