@@ -2,6 +2,7 @@
 package com.android.purebilibili.navigation
 
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.net.Uri
@@ -46,6 +47,12 @@ import com.android.purebilibili.feature.search.SearchScreen
 import com.android.purebilibili.feature.settings.SettingsScreen
 import com.android.purebilibili.feature.settings.AppearanceSettingsScreen
 import com.android.purebilibili.feature.settings.PlaybackSettingsScreen
+import com.android.purebilibili.feature.settings.SettingsViewModel
+import com.android.purebilibili.feature.settings.SettingsViewModelFactory
+import com.android.purebilibili.feature.settings.share.SettingsShareViewModel
+import com.android.purebilibili.feature.settings.share.SettingsShareViewModelFactory
+import com.android.purebilibili.feature.settings.webdav.WebDavBackupViewModel
+import com.android.purebilibili.feature.settings.webdav.WebDavBackupViewModelFactory
 import com.android.purebilibili.feature.settings.OFFICIAL_GITHUB_URL
 import com.android.purebilibili.feature.settings.OFFICIAL_TELEGRAM_URL
 import com.android.purebilibili.feature.settings.RELEASE_DISCLAIMER_ACK_KEY
@@ -240,6 +247,11 @@ fun AppNavigation(
     
     // 单一首页视觉配置源：减少根导航层多路 DataStore 收集导致的全局重组。
     val context = androidx.compose.ui.platform.LocalContext.current
+    val application = remember(context) { context.applicationContext as Application }
+    // Navigation3 的条目级 ViewModelStore 不一定携带 Application extras，设置页统一从根导航注入。
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = remember(application) { SettingsViewModelFactory(application) }
+    )
     val uriHandler = LocalUriHandler.current
     val downloadTasks by com.android.purebilibili.feature.download.DownloadManager.tasks.collectAsState()
     val uiPreset = LocalUiPreset.current
@@ -1282,6 +1294,7 @@ fun AppNavigation(
                                 }
                             )
                         BiliPaiNavEntryContentRole.SETTINGS -> SettingsScreen(
+                                viewModel = settingsViewModel,
                                 onBack = { performSystemBackAction() },
                                 onOpenSourceLicensesClick = { pushNavigation3Key(BiliPaiNavKey.OpenSourceLicenses) },
                                 onAppearanceClick = { pushNavigation3Key(BiliPaiNavKey.AppearanceSettings) },
@@ -1302,20 +1315,24 @@ fun AppNavigation(
                             )
                         BiliPaiNavEntryContentRole.APPEARANCE_SETTINGS ->
                             AppearanceSettingsScreen(
+                                viewModel = settingsViewModel,
                                 onBack = { performSystemBackAction() },
                                 onNavigateToIconSettings = { pushNavigation3Key(BiliPaiNavKey.IconSettings) },
                                 onNavigateToAnimationSettings = { pushNavigation3Key(BiliPaiNavKey.AnimationSettings) }
                             )
                         BiliPaiNavEntryContentRole.ICON_SETTINGS ->
                             com.android.purebilibili.feature.settings.IconSettingsScreen(
+                                viewModel = settingsViewModel,
                                 onBack = { performSystemBackAction() }
                             )
                         BiliPaiNavEntryContentRole.ANIMATION_SETTINGS ->
                             com.android.purebilibili.feature.settings.AnimationSettingsScreen(
+                                viewModel = settingsViewModel,
                                 onBack = { performSystemBackAction() }
                             )
                         BiliPaiNavEntryContentRole.PLAYBACK_SETTINGS ->
                             PlaybackSettingsScreen(
+                                viewModel = settingsViewModel,
                                 onBack = { performSystemBackAction() }
                             )
                         BiliPaiNavEntryContentRole.PERMISSION_SETTINGS ->
@@ -1333,14 +1350,24 @@ fun AppNavigation(
                             com.android.purebilibili.feature.settings.BottomBarSettingsScreen(
                                 onBack = { performSystemBackAction() }
                             )
-                        BiliPaiNavEntryContentRole.SETTINGS_SHARE ->
+                        BiliPaiNavEntryContentRole.SETTINGS_SHARE -> {
+                            val settingsShareViewModel: SettingsShareViewModel = viewModel(
+                                factory = remember(application) { SettingsShareViewModelFactory(application) }
+                            )
                             com.android.purebilibili.feature.settings.share.SettingsShareScreen(
-                                onBack = { performSystemBackAction() }
+                                onBack = { performSystemBackAction() },
+                                viewModel = settingsShareViewModel
                             )
-                        BiliPaiNavEntryContentRole.WEB_DAV_BACKUP ->
+                        }
+                        BiliPaiNavEntryContentRole.WEB_DAV_BACKUP -> {
+                            val webDavBackupViewModel: WebDavBackupViewModel = viewModel(
+                                factory = remember(application) { WebDavBackupViewModelFactory(application) }
+                            )
                             com.android.purebilibili.feature.settings.webdav.WebDavBackupScreen(
-                                onBack = { performSystemBackAction() }
+                                onBack = { performSystemBackAction() },
+                                viewModel = webDavBackupViewModel
                             )
+                        }
                         BiliPaiNavEntryContentRole.TIPS_SETTINGS ->
                             com.android.purebilibili.feature.settings.TipsSettingsScreen(
                                 onBack = { performSystemBackAction() }
