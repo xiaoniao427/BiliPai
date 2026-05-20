@@ -1099,6 +1099,10 @@ fun HomeScreen(
     LaunchedEffect(pendingHeroFlyoutRequest) {
         val pendingRequest = pendingHeroFlyoutRequest ?: return@LaunchedEffect
         delay(resolveHomeHeroFlyoutNavigationDelayMillis())
+        hideTopTabsForForwardDetailNav = true
+        delayTopTabsUntilCardSettled = false
+        setBottomBarVisible(false)
+        isVideoNavigating = true
         onVideoClick(pendingRequest)
         delay(80L)
         if (pendingHeroFlyoutRequest == pendingRequest) {
@@ -1114,13 +1118,13 @@ fun HomeScreen(
     ) {
         { request ->
             if (pendingHeroFlyoutRequest == null) {
-                hideTopTabsForForwardDetailNav = true
-                delayTopTabsUntilCardSettled = false
-                setBottomBarVisible(false)
-                isVideoNavigating = true
                 if (shouldRunHomeHeroFlyoutBeforeNavigation(request)) {
                     pendingHeroFlyoutRequest = request
                 } else {
+                    hideTopTabsForForwardDetailNav = true
+                    delayTopTabsUntilCardSettled = false
+                    setBottomBarVisible(false)
+                    isVideoNavigating = true
                     onVideoClick(request)
                 }
             }

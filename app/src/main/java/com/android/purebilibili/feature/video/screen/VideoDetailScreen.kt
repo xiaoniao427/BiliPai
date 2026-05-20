@@ -162,6 +162,8 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
+import com.android.purebilibili.core.ui.transition.resolveHomeVideoSharedTransitionCornerSpec
+import com.android.purebilibili.core.ui.transition.resolveHomeVideoSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoDetailContentRevealMotion
 import com.android.purebilibili.core.ui.rememberAppChevronUpIcon
 import com.android.purebilibili.core.ui.rememberAppCollectionIcon
@@ -736,6 +738,18 @@ fun VideoDetailScreen(
     }
     val detailContentRevealMotion = remember(sourceRouteForSharedElement, transitionEnabled) {
         resolveVideoDetailContentRevealMotion(
+            sourceRoute = sourceRouteForSharedElement,
+            transitionEnabled = transitionEnabled
+        )
+    }
+    val homeSharedTransitionMotionSpec = remember(sourceRouteForSharedElement, transitionEnabled) {
+        resolveHomeVideoSharedTransitionMotionSpec(
+            sourceRoute = sourceRouteForSharedElement,
+            transitionEnabled = transitionEnabled
+        )
+    }
+    val homeSharedTransitionCornerSpec = remember(sourceRouteForSharedElement, transitionEnabled) {
+        resolveHomeVideoSharedTransitionCornerSpec(
             sourceRoute = sourceRouteForSharedElement,
             transitionEnabled = transitionEnabled
         )
@@ -2753,10 +2767,23 @@ fun VideoDetailScreen(
                                     ),
                                     animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                                     boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        if (homeSharedTransitionMotionSpec.enabled) {
+                                            tween(
+                                                durationMillis = homeSharedTransitionMotionSpec.durationMillis,
+                                                easing = FastOutSlowInEasing
+                                            )
+                                        } else {
+                                            com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        }
                                     },
                                     clipInOverlayDuringTransition = OverlayClip(
-                                        RoundedCornerShape(12.dp)
+                                        RoundedCornerShape(
+                                            if (homeSharedTransitionCornerSpec.enabled) {
+                                                homeSharedTransitionCornerSpec.endCornerDp.dp
+                                            } else {
+                                                12.dp
+                                            }
+                                        )
                                     )
                                 )
                         }

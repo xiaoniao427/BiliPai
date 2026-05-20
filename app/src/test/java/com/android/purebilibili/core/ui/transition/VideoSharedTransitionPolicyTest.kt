@@ -26,7 +26,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun metadataSharedTransition_enabled_byDefault_forUnifiedVideoReturn() {
+    fun metadataSharedTransition_keepsDefaultForNonHomeCallers() {
         assertEquals(VideoSharedTransitionProfile.COVER_AND_METADATA, resolveVideoSharedTransitionProfile())
         assertTrue(
             shouldEnableVideoMetadataSharedTransition(
@@ -37,7 +37,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun metadataSharedTransition_staysEnabled_evenWhenQuickReturnLimited() {
+    fun metadataSharedTransition_staysEnabledWhenQuickReturnLimitedForNonHomeCallers() {
         assertTrue(
             shouldEnableVideoMetadataSharedTransition(
                 coverSharedEnabled = true,
@@ -70,6 +70,18 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
+    fun nonHomeVideoTransition_keepsMetadataSharedBoundsWhenAvailable() {
+        val policy = resolveVideoSharedTransitionOwnership(
+            sourceRoute = "search",
+            coverSharedEnabled = true,
+            isQuickReturnLimited = false
+        )
+
+        assertTrue(policy.useCoverSharedBounds)
+        assertTrue(policy.useMetadataSharedBounds)
+    }
+
+    @Test
     fun detailContentReveal_usesLightVisibleMotionForHomeSharedTransition() {
         val motion = resolveVideoDetailContentRevealMotion(
             sourceRoute = "home",
@@ -81,6 +93,44 @@ class VideoSharedTransitionPolicyTest {
         assertEquals(220, motion.durationMillis)
         assertEquals(14, motion.slideOffsetDp)
         assertEquals(0.985f, motion.initialScale, 0.0001f)
+    }
+
+    @Test
+    fun homeSharedTransitionMotion_usesShortCoverPrimaryTimeline() {
+        val motion = resolveHomeVideoSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true
+        )
+
+        assertTrue(motion.enabled)
+        assertEquals(360, motion.durationMillis)
+        assertEquals(40, motion.contentDelayMillis)
+        assertEquals(220, motion.contentDurationMillis)
+        assertEquals(14, motion.contentSlideOffsetDp)
+        assertEquals(0.985f, motion.contentInitialScale, 0.0001f)
+    }
+
+    @Test
+    fun homeSharedTransitionMotion_disabledForNonHomeSources() {
+        val motion = resolveHomeVideoSharedTransitionMotionSpec(
+            sourceRoute = "search",
+            transitionEnabled = true
+        )
+
+        assertFalse(motion.enabled)
+        assertEquals(0, motion.durationMillis)
+    }
+
+    @Test
+    fun homeSharedTransitionCornerSpec_softlyConvergesFromCardToPlayer() {
+        val corner = resolveHomeVideoSharedTransitionCornerSpec(
+            sourceRoute = "home",
+            transitionEnabled = true
+        )
+
+        assertTrue(corner.enabled)
+        assertEquals(16, corner.startCornerDp)
+        assertEquals(12, corner.endCornerDp)
     }
 
     @Test

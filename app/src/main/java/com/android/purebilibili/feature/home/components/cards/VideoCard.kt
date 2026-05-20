@@ -67,6 +67,8 @@ import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.components.UpBadgeName
 import com.android.purebilibili.core.ui.components.resolveUpStatsText
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
+import com.android.purebilibili.core.ui.transition.resolveHomeVideoSharedTransitionCornerSpec
+import com.android.purebilibili.core.ui.transition.resolveHomeVideoSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionOwnership
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
@@ -435,6 +437,18 @@ fun ElegantVideoCard(
             coverSharedEnabled = coverSharedEnabled,
             isQuickReturnLimited = isQuickReturnLimited
         )
+        val homeSharedTransitionMotionSpec = remember(homeSharedElementSourceRoute, transitionEnabled) {
+            resolveHomeVideoSharedTransitionMotionSpec(
+                sourceRoute = homeSharedElementSourceRoute,
+                transitionEnabled = transitionEnabled
+            )
+        }
+        val homeSharedTransitionCornerSpec = remember(homeSharedElementSourceRoute, transitionEnabled) {
+            resolveHomeVideoSharedTransitionCornerSpec(
+                sourceRoute = homeSharedElementSourceRoute,
+                transitionEnabled = transitionEnabled
+            )
+        }
         val connectedCardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
         val cardContainerModifier = if (infoSurfaceAppearance.useTintedSurface) {
             Modifier
@@ -455,7 +469,11 @@ fun ElegantVideoCard(
             val metadataSharedEnabled = sharedTransitionOwnership.useMetadataSharedBounds
         
         //  [性能优化] 封面圆角形状缓存（避免重组时重复创建）
-        val coverShape = remember(cardCornerRadius, infoSurfaceAppearance.useTintedSurface) {
+        val coverShape = remember(
+            cardCornerRadius,
+            infoSurfaceAppearance.useTintedSurface,
+            homeSharedTransitionCornerSpec
+        ) {
             if (infoSurfaceAppearance.useTintedSurface) {
                 RoundedCornerShape(
                     topStart = cardCornerRadius,
@@ -464,7 +482,13 @@ fun ElegantVideoCard(
                     bottomEnd = 0.dp
                 )
             } else {
-                RoundedCornerShape(cardCornerRadius)
+                RoundedCornerShape(
+                    if (homeSharedTransitionCornerSpec.enabled) {
+                        homeSharedTransitionCornerSpec.startCornerDp.dp
+                    } else {
+                        cardCornerRadius
+                    }
+                )
             }
         }
 
@@ -479,7 +503,10 @@ fun ElegantVideoCard(
                     ),
                     animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                     boundsTransform = { _, _ ->
-                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                        tween(
+                            durationMillis = homeSharedTransitionMotionSpec.durationMillis,
+                            easing = FastOutSlowInEasing
+                        )
                     },
                     clipInOverlayDuringTransition = OverlayClip(coverShape)
                 )
@@ -528,21 +555,6 @@ fun ElegantVideoCard(
                     )
                 }
         ) {
-            // [新增] 监听共享元素归位（即封面重新可见时），触发轻微震动反馈
-            // 注意：当从详情页返回时，sharedElement 动画结束，封面会从不可见变为可见
-            if (metadataSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                     // 使用 renderInSharedTransitionScopeOverlayOption 控制可见性
-                     // 但此处我们可以利用 SideEffect 或 LaunchedEffect 监听
-                }
-                
-                // 简单方案：当 VideoCard 重新组合且处于可见状态时（通常意味着转场结束）
-                // 但 Compose 重组频繁，需结合当前返回会话状态
-                
-                // 优化方案：我们在 sharedElement 的 boundsTransform 中无法直接触发副作用
-                // 暂时方案：依靠 SharedTransitionScope 的 renderInOverlay 属性变化难以捕捉
-                // 替代方案：在 VideoPlayerSection 退出时触发一次，或者在 CardPositionManager 中管理
-            }
             // 🚀 [性能优化] 使用从父级传入的 isDataSaverActive，避免每个卡片重复计算
             val imageWidth = if (isDataSaverActive) 240 else 360
             val imageHeight = if (isDataSaverActive) 150 else 225

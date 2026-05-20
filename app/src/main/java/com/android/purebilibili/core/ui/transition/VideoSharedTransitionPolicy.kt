@@ -7,10 +7,13 @@ internal enum class VideoSharedTransitionProfile {
 
 internal const val VIDEO_SHARED_COVER_ASPECT_RATIO = 16f / 10f
 private const val HOME_SOURCE_ROUTE = "home"
+private const val HOME_SHARED_TRANSITION_DURATION_MILLIS = 360
 private const val HOME_DETAIL_REVEAL_DELAY_MILLIS = 40
 private const val HOME_DETAIL_REVEAL_DURATION_MILLIS = 220
 private const val HOME_DETAIL_REVEAL_SLIDE_OFFSET_DP = 14
 private const val HOME_DETAIL_REVEAL_INITIAL_SCALE = 0.985f
+private const val HOME_SHARED_TRANSITION_CARD_CORNER_DP = 16
+private const val HOME_SHARED_TRANSITION_PLAYER_CORNER_DP = 12
 
 internal data class VideoSharedTransitionOwnership(
     val useCoverSharedBounds: Boolean,
@@ -25,9 +28,31 @@ internal data class VideoDetailContentRevealMotion(
     val initialScale: Float
 )
 
+internal data class VideoSharedTransitionMotionSpec(
+    val enabled: Boolean,
+    val durationMillis: Int,
+    val contentDelayMillis: Int,
+    val contentDurationMillis: Int,
+    val contentSlideOffsetDp: Int,
+    val contentInitialScale: Float
+)
+
+internal data class VideoSharedCornerSpec(
+    val enabled: Boolean,
+    val startCornerDp: Int,
+    val endCornerDp: Int
+)
+
 internal fun resolveVideoSharedTransitionProfile(): VideoSharedTransitionProfile {
-    // Prefer a unified return choreography: cover + key metadata move back together.
     return VideoSharedTransitionProfile.COVER_AND_METADATA
+}
+
+private fun resolveVideoSharedTransitionProfile(sourceRoute: String?): VideoSharedTransitionProfile {
+    return if (sourceRoute?.substringBefore("?") == HOME_SOURCE_ROUTE) {
+        VideoSharedTransitionProfile.COVER_ONLY
+    } else {
+        VideoSharedTransitionProfile.COVER_AND_METADATA
+    }
 }
 
 internal fun shouldEnableVideoCoverSharedTransition(
@@ -73,17 +98,69 @@ internal fun resolveVideoSharedTransitionOwnership(
         useMetadataSharedBounds = !isHomeSource &&
             shouldEnableVideoMetadataSharedTransition(
                 coverSharedEnabled = true,
-                isQuickReturnLimited = isQuickReturnLimited
+                isQuickReturnLimited = isQuickReturnLimited,
+                profile = resolveVideoSharedTransitionProfile(sourceRoute)
             )
     )
+}
+
+internal fun resolveHomeVideoSharedTransitionMotionSpec(
+    sourceRoute: String?,
+    transitionEnabled: Boolean
+): VideoSharedTransitionMotionSpec {
+    val enabled = transitionEnabled &&
+        sourceRoute?.substringBefore("?") == HOME_SOURCE_ROUTE
+    if (!enabled) {
+        return VideoSharedTransitionMotionSpec(
+            enabled = false,
+            durationMillis = 0,
+            contentDelayMillis = 0,
+            contentDurationMillis = 0,
+            contentSlideOffsetDp = 0,
+            contentInitialScale = 1f
+        )
+    }
+
+    return VideoSharedTransitionMotionSpec(
+        enabled = true,
+        durationMillis = HOME_SHARED_TRANSITION_DURATION_MILLIS,
+        contentDelayMillis = HOME_DETAIL_REVEAL_DELAY_MILLIS,
+        contentDurationMillis = HOME_DETAIL_REVEAL_DURATION_MILLIS,
+        contentSlideOffsetDp = HOME_DETAIL_REVEAL_SLIDE_OFFSET_DP,
+        contentInitialScale = HOME_DETAIL_REVEAL_INITIAL_SCALE
+    )
+}
+
+internal fun resolveHomeVideoSharedTransitionCornerSpec(
+    sourceRoute: String?,
+    transitionEnabled: Boolean
+): VideoSharedCornerSpec {
+    val enabled = transitionEnabled &&
+        sourceRoute?.substringBefore("?") == HOME_SOURCE_ROUTE
+    return if (enabled) {
+        VideoSharedCornerSpec(
+            enabled = true,
+            startCornerDp = HOME_SHARED_TRANSITION_CARD_CORNER_DP,
+            endCornerDp = HOME_SHARED_TRANSITION_PLAYER_CORNER_DP
+        )
+    } else {
+        VideoSharedCornerSpec(
+            enabled = false,
+            startCornerDp = 0,
+            endCornerDp = 0
+        )
+    }
 }
 
 internal fun resolveVideoDetailContentRevealMotion(
     sourceRoute: String?,
     transitionEnabled: Boolean
 ): VideoDetailContentRevealMotion {
-    val isHomeSharedTransition = transitionEnabled &&
-        sourceRoute?.substringBefore("?") == HOME_SOURCE_ROUTE
+    val homeMotionSpec = resolveHomeVideoSharedTransitionMotionSpec(
+        sourceRoute = sourceRoute,
+        transitionEnabled = transitionEnabled
+    )
+    val isHomeSharedTransition = homeMotionSpec.enabled
     if (!isHomeSharedTransition) {
         return VideoDetailContentRevealMotion(
             enabled = false,
@@ -96,9 +173,9 @@ internal fun resolveVideoDetailContentRevealMotion(
 
     return VideoDetailContentRevealMotion(
         enabled = true,
-        delayMillis = HOME_DETAIL_REVEAL_DELAY_MILLIS,
-        durationMillis = HOME_DETAIL_REVEAL_DURATION_MILLIS,
-        slideOffsetDp = HOME_DETAIL_REVEAL_SLIDE_OFFSET_DP,
-        initialScale = HOME_DETAIL_REVEAL_INITIAL_SCALE
+        delayMillis = homeMotionSpec.contentDelayMillis,
+        durationMillis = homeMotionSpec.contentDurationMillis,
+        slideOffsetDp = homeMotionSpec.contentSlideOffsetDp,
+        initialScale = homeMotionSpec.contentInitialScale
     )
 }

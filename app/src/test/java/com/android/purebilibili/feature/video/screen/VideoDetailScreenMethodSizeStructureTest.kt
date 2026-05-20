@@ -23,6 +23,20 @@ class VideoDetailScreenMethodSizeStructureTest {
         assertTrue(source.contains("private fun VideoDetailDanmakuContextMenu("))
     }
 
+    @Test
+    fun videoDetailPlayerContainerUsesHomeSharedTransitionPolicy() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
+        val playerContainerSource = source
+            .substringAfter("val playerContainerModifier = if (")
+            .substringBefore("//  播放器容器包含状态栏高度")
+
+        assertTrue(source.contains("resolveHomeVideoSharedTransitionMotionSpec("))
+        assertTrue(source.contains("resolveHomeVideoSharedTransitionCornerSpec("))
+        assertTrue(playerContainerSource.contains("homeSharedTransitionMotionSpec.enabled"))
+        assertTrue(playerContainerSource.contains("durationMillis = homeSharedTransitionMotionSpec.durationMillis"))
+        assertTrue(playerContainerSource.contains("homeSharedTransitionCornerSpec.endCornerDp.dp"))
+    }
+
     private fun loadSource(path: String): String {
         val candidates = listOf(
             File(path),
