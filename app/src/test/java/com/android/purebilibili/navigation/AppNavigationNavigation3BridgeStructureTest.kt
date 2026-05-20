@@ -25,6 +25,16 @@ class AppNavigationNavigation3BridgeStructureTest {
         assertTrue(source.contains("shouldInterceptSystemBackForNavigation3"))
     }
 
+    @Test
+    fun appNavigationMirrorsReturnStateIntoNavigation3SessionBeforeLegacyFallback() {
+        val source = appNavigationSource()
+
+        assertTrue(source.contains("BiliPaiReturnSessionState"))
+        assertTrue(source.contains("navigation3ReturnSession"))
+        assertTrue(source.contains("BiliPaiNavSourceMetadata"))
+        assertTrue(source.contains("navigation3ReturnSession.markReturning"))
+    }
+
     private fun appNavigationSource(): String {
         return listOf(
             File("app/src/main/java/com/android/purebilibili/navigation/AppNavigation.kt"),

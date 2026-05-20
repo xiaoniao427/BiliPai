@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.net.Uri
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -123,6 +124,8 @@ import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.util.NetworkUtils
 import com.android.purebilibili.navigation3.BiliPaiNavKey
 import com.android.purebilibili.navigation3.BiliPaiNavRouteTransition
+import com.android.purebilibili.navigation3.BiliPaiNavSourceMetadata
+import com.android.purebilibili.navigation3.BiliPaiReturnSessionState
 import com.android.purebilibili.navigation3.legacyRouteToBiliPaiNavKey
 import com.android.purebilibili.navigation3.popBiliPaiNavKey
 import com.android.purebilibili.navigation3.pushBiliPaiNavKey
@@ -219,7 +222,8 @@ internal fun resolveStandardVideoRoute(
 
 private fun resolveBiliPaiNavKeyForLegacyBackStackEntry(
     entry: NavBackStackEntry?,
-    currentRoute: String?
+    currentRoute: String?,
+    videoSourceRoute: String? = null
 ): BiliPaiNavKey {
     val route = entry?.destination?.route ?: currentRoute
     val arguments = entry?.arguments
@@ -233,7 +237,7 @@ private fun resolveBiliPaiNavKeyForLegacyBackStackEntry(
             fullscreen = arguments.getBoolean("fullscreen"),
             resumePositionMs = arguments.getLong("resumePositionMs"),
             commentRootRpid = arguments.getLong("commentRootRpid"),
-            sourceRoute = CardPositionManager.lastVideoSourceRoute
+            sourceRoute = videoSourceRoute ?: CardPositionManager.lastVideoSourceRoute
         )
     }
     return legacyRouteToBiliPaiNavKey(route)
@@ -308,6 +312,7 @@ fun AppNavigation(
     var searchEntryMotionKey by remember { mutableStateOf(0) }
     var bottomBarSearchLaunchKey by remember { mutableStateOf(0) }
     var pendingBottomBarSearchLaunchKey by remember { mutableStateOf<Int?>(null) }
+    var navigation3ReturnSession by remember { mutableStateOf(BiliPaiReturnSessionState()) }
     val effectiveInitialSearchKeyword = inAppSearchKeyword ?: initialSearchKeyword
     val consumeInitialSearchKeyword: (String) -> Unit = { consumedKeyword ->
         if (inAppSearchKeyword == consumedKeyword) {
@@ -328,9 +333,11 @@ fun AppNavigation(
         if (!canNavigate(false)) return
 
         //  [修复] 设置导航标志，抑制小窗显示
-        CardPositionManager.recordVideoSourceRoute(
-            navController.currentBackStackEntry?.destination?.route
-        )
+        val sourceRoute = navController.currentBackStackEntry?.destination?.route
+        navigation3ReturnSession = navigation3ReturnSession
+            .recordVideoSourceRoute(sourceRoute)
+            .markDetailEntered(SystemClock.uptimeMillis())
+        CardPositionManager.recordVideoSourceRoute(sourceRoute)
         miniPlayerManager?.isNavigatingToVideo = true
         //  如果有小窗在播放，先退出小窗模式
         //  [修复] 点击新视频时，立即关闭小窗不播放退出动画，避免闪烁
@@ -623,10 +630,15 @@ fun AppNavigation(
                 )
             )
         }
-        val currentNavigation3Key = remember(navBackStackEntry, currentRoute) {
+        val currentNavigation3Key = remember(
+            navBackStackEntry,
+            currentRoute,
+            navigation3ReturnSession.lastVideoSourceRoute
+        ) {
             resolveBiliPaiNavKeyForLegacyBackStackEntry(
                 entry = navBackStackEntry,
-                currentRoute = currentRoute
+                currentRoute = currentRoute,
+                videoSourceRoute = navigation3ReturnSession.lastVideoSourceRoute
             )
         }
         LaunchedEffect(currentNavigation3Key) {
@@ -1134,8 +1146,12 @@ fun AppNavigation(
             popEnterTransition = { 
                 val fromRoute = initialState.destination.route
                 val fromSettings = fromRoute == ScreenRoutes.Settings.route
-                val sharedTransitionReady = CardPositionManager.lastClickedCardBounds != null &&
-                    CardPositionManager.isCardFullyVisible
+                val navigation3SourceMetadata = BiliPaiNavSourceMetadata(
+                    sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
+                    clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
+                    cardFullyVisible = CardPositionManager.isCardFullyVisible
+                )
+                val sharedTransitionReady = navigation3SourceMetadata.sharedTransitionReady
                 val navigation3MotionDecision = resolveBiliPaiNavMotionDecision(
                     fromKey = legacyRouteToBiliPaiNavKey(fromRoute),
                     toKey = BiliPaiNavKey.Home,
@@ -1584,8 +1600,12 @@ fun AppNavigation(
             enterTransition = {
                 val fromRoute = initialState.destination.route
                 val targetRoute = targetState.destination.route
-                val sharedTransitionReady = CardPositionManager.lastClickedCardBounds != null &&
-                    CardPositionManager.isCardFullyVisible
+                val navigation3SourceMetadata = BiliPaiNavSourceMetadata(
+                    sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
+                    clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
+                    cardFullyVisible = CardPositionManager.isCardFullyVisible
+                )
+                val sharedTransitionReady = navigation3SourceMetadata.sharedTransitionReady
                 when (
                     resolveVideoPushEnterAction(
                         cardTransitionEnabled = cardTransitionEnabled,
@@ -1652,8 +1672,12 @@ fun AppNavigation(
             popExitTransition = { 
                 val fromRoute = initialState.destination.route
                 val targetRoute = targetState.destination.route
-                val sharedTransitionReady = CardPositionManager.lastClickedCardBounds != null &&
-                    CardPositionManager.isCardFullyVisible
+                val navigation3SourceMetadata = BiliPaiNavSourceMetadata(
+                    sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
+                    clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
+                    cardFullyVisible = CardPositionManager.isCardFullyVisible
+                )
+                val sharedTransitionReady = navigation3SourceMetadata.sharedTransitionReady
                 val navigation3MotionDecision = resolveBiliPaiNavMotionDecision(
                     fromKey = legacyRouteToBiliPaiNavKey(fromRoute),
                     toKey = legacyRouteToBiliPaiNavKey(targetRoute),
@@ -1816,6 +1840,7 @@ fun AppNavigation(
 
                     if (shouldClearReturningStateWhenDisposingVideoDestination(stillInVideoRoute)) {
                         // videoB -> videoA 返回时，不应沿用“返回列表页”的封面接管状态。
+                        navigation3ReturnSession = navigation3ReturnSession.clearReturning()
                         CardPositionManager.clearReturning()
                     }
 
@@ -1864,6 +1889,7 @@ fun AppNavigation(
                     transitionMaxBlurRadiusPx = navMotionSpec.maxBackdropBlurRadius,
                     onBack = { 
                         //  标记正在返回，跳过首页卡片入场动画
+                        navigation3ReturnSession = navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
                         CardPositionManager.markReturning()
                         // 🎯 [新增] 标记通过导航离开，让播放器暂停
                         miniPlayerManager?.markLeavingByNavigation(expectedBvid = bvid)
@@ -1871,6 +1897,7 @@ fun AppNavigation(
                         navController.popBackStack() 
                     },
                     onHomeClick = {
+                        navigation3ReturnSession = navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
                         CardPositionManager.markReturning()
                         miniPlayerManager?.markLeavingByNavigation(expectedBvid = bvid)
                         forceNavigateToHome()
@@ -2710,8 +2737,10 @@ fun AppNavigation(
                     transitionEnabled = cardTransitionEnabled,
                     onBack = { useSharedReturn ->
                         if (useSharedReturn) {
+                            navigation3ReturnSession = navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
                             CardPositionManager.markReturning()
                         } else {
+                            navigation3ReturnSession = navigation3ReturnSession.clearReturning()
                             CardPositionManager.clearReturning()
                         }
                         navController.popBackStack()
