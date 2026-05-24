@@ -5,8 +5,8 @@ import android.content.Context
 import com.android.purebilibili.BuildConfig
 import com.android.purebilibili.core.network.policy.HomeFeedAnonymizerRuntime
 import com.android.purebilibili.core.network.policy.resolveHardcodedDnsFallback
+import com.android.purebilibili.core.network.policy.resolveHomeFeedCookieAnonymizerDecision
 import com.android.purebilibili.core.network.policy.shouldEnableTrustAllCertificates
-import com.android.purebilibili.core.network.policy.shouldClearHomeFeedCookies
 import com.android.purebilibili.core.store.TokenManager
 import com.android.purebilibili.data.model.response.*
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -49,7 +49,7 @@ private class AppSessionCookieJar : okhttp3.CookieJar {
     }
 
     override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> {
-        if (shouldClearHomeFeedCookies(
+        if (resolveHomeFeedCookieAnonymizerDecision(
                 pluginEnabled = HomeFeedAnonymizerRuntime.enabled,
                 host = url.host,
                 encodedPath = url.encodedPath

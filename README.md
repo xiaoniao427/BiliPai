@@ -119,7 +119,7 @@ BiliPai 的界面围绕“内容优先、控制轻量、动效克制”调整。
 > [!CAUTION]
 > 导入第三方插件前请审阅规则和能力声明，尤其是 `NETWORK`、`LOCAL_HISTORY_READ`、`LOCAL_FEEDBACK_READ`、`PLAYER_CONTROL` 等敏感能力。
 
-> 初见推荐的网络策略思路参考 [TabulaBili-Plus](https://github.com/tjsky/TabulaBili) 与 [TabulaBili](https://github.com/wangdaodaodao/TabulaBili)，BiliPai 仅实现 Android 端内置插件形态。
+> 初见推荐致谢原作者 wangdaodao 的 [TabulaBili](https://github.com/wangdaodaodao/TabulaBili) 与 tjsky 的 [TabulaBili-Plus](https://github.com/tjsky/TabulaBili)，BiliPai 仅实现 Android 端内置插件形态。
 
 ## 技术栈
 

@@ -87,7 +87,7 @@
 | **Plugin Center** | Unified management for all plugins with independent configurations |
 | **🆕 External Plugins** | Support loading dynamic JSON rule plugins via URL |
 
-First Visit Recommendation is inspired by [TabulaBili-Plus](https://github.com/tjsky/TabulaBili) and [TabulaBili](https://github.com/wangdaodaodao/TabulaBili), adapted as a built-in Android plugin.
+First Visit Recommendation credits wangdaodao's original [TabulaBili](https://github.com/wangdaodaodao/TabulaBili) and tjsky's [TabulaBili-Plus](https://github.com/tjsky/TabulaBili), adapted here as a built-in Android plugin.
 
 #### Implemented Details (Supplement)
 

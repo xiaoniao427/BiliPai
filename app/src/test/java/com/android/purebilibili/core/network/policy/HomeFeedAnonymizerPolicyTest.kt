@@ -1,7 +1,9 @@
 package com.android.purebilibili.core.network.policy
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class HomeFeedAnonymizerPolicyTest {
@@ -65,5 +67,59 @@ class HomeFeedAnonymizerPolicyTest {
                 )
             )
         }
+    }
+
+    @Test
+    fun matchingWebHomeFeedRequest_recordsAnonymizerStats() {
+        HomeFeedAnonymizerRuntime.resetStats()
+
+        val shouldClear = resolveHomeFeedCookieAnonymizerDecision(
+            pluginEnabled = true,
+            host = "api.bilibili.com",
+            encodedPath = "/x/web-interface/wbi/index/top/feed/rcmd",
+            nowMs = 1_700_000_000_000L
+        )
+        val snapshot = HomeFeedAnonymizerRuntime.statsSnapshot
+
+        assertTrue(shouldClear)
+        assertEquals(1L, snapshot.totalHits)
+        assertEquals(1_700_000_000_000L, snapshot.lastHitAtMs)
+        assertEquals("api.bilibili.com", snapshot.lastHitHost)
+        assertEquals("/x/web-interface/wbi/index/top/feed/rcmd", snapshot.lastHitEncodedPath)
+    }
+
+    @Test
+    fun nonMatchingRequest_doesNotRecordAnonymizerStats() {
+        HomeFeedAnonymizerRuntime.resetStats()
+
+        val shouldClear = resolveHomeFeedCookieAnonymizerDecision(
+            pluginEnabled = true,
+            host = "api.bilibili.com",
+            encodedPath = "/x/web-interface/nav",
+            nowMs = 1_700_000_000_000L
+        )
+
+        assertFalse(shouldClear)
+        assertEquals(0L, HomeFeedAnonymizerRuntime.statsSnapshot.totalHits)
+        assertNull(HomeFeedAnonymizerRuntime.statsSnapshot.lastHitAtMs)
+    }
+
+    @Test
+    fun resetStats_clearsAnonymizerStats() {
+        HomeFeedAnonymizerRuntime.resetStats()
+        resolveHomeFeedCookieAnonymizerDecision(
+            pluginEnabled = true,
+            host = "api.bilibili.com",
+            encodedPath = "/x/web-interface/wbi/index/top/feed/rcmd",
+            nowMs = 1_700_000_000_000L
+        )
+
+        HomeFeedAnonymizerRuntime.resetStats()
+
+        val snapshot = HomeFeedAnonymizerRuntime.statsSnapshot
+        assertEquals(0L, snapshot.totalHits)
+        assertNull(snapshot.lastHitAtMs)
+        assertNull(snapshot.lastHitHost)
+        assertNull(snapshot.lastHitEncodedPath)
     }
 }
