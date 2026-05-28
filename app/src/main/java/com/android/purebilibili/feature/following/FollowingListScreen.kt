@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -1179,6 +1180,12 @@ private fun FollowingUserItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val officialBadge = remember(user.officialVerify) {
+        resolveFollowingOfficialVerifyBadge(user.officialVerify)
+    }
+    val followingSinceLabel = remember(user.mtime) {
+        formatFollowingSinceLabel(user.mtime)
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1204,14 +1211,34 @@ private fun FollowingUserItem(
         
         // 用户信息
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = user.uname,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = user.uname,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (officialBadge != null) {
+                    Spacer(Modifier.width(6.dp))
+                    FollowingOfficialVerifyBadgeView(officialBadge)
+                }
+            }
+            if (followingSinceLabel.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = followingSinceLabel,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             if (user.sign.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -1230,5 +1257,33 @@ private fun FollowingUserItem(
                 onCheckedChange = { onClick() }
             )
         }
+    }
+}
+
+@Composable
+private fun FollowingOfficialVerifyBadgeView(
+    badge: FollowingOfficialVerifyBadge
+) {
+    val containerColor = when (badge.tone) {
+        FollowingOfficialVerifyBadgeTone.PERSONAL -> Color(0xFFFFF3CD)
+        FollowingOfficialVerifyBadgeTone.ORGANIZATION -> Color(0xFFDCEBFF)
+    }
+    val contentColor = when (badge.tone) {
+        FollowingOfficialVerifyBadgeTone.PERSONAL -> Color(0xFF7A4B00)
+        FollowingOfficialVerifyBadgeTone.ORGANIZATION -> Color(0xFF174EA6)
+    }
+    Surface(
+        modifier = Modifier.widthIn(max = 120.dp),
+        color = containerColor,
+        contentColor = contentColor,
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Text(
+            text = badge.text,
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+        )
     }
 }

@@ -224,6 +224,8 @@ fun PortraitVideoPager(
     val danmakuSpeed = danmakuSettings.speed
     val danmakuDisplayArea = danmakuSettings.displayArea
     val danmakuMergeDuplicates = danmakuSettings.mergeDuplicates
+    val danmakuDuplicateMergeWindowMs = danmakuSettings.duplicateMergeWindowMs
+    val danmakuDuplicateMergeCountThreshold = danmakuSettings.duplicateMergeCountThreshold
     val danmakuAllowScroll = danmakuSettings.allowScroll
     val danmakuAllowTop = danmakuSettings.allowTop
     val danmakuAllowBottom = danmakuSettings.allowBottom
@@ -882,6 +884,8 @@ fun PortraitVideoPager(
         danmakuSpeed,
         danmakuDisplayArea,
         danmakuMergeDuplicates,
+        danmakuDuplicateMergeWindowMs,
+        danmakuDuplicateMergeCountThreshold,
         danmakuAllowScroll,
         danmakuAllowTop,
         danmakuAllowBottom,
@@ -898,6 +902,8 @@ fun PortraitVideoPager(
             speed = danmakuSpeed,
             displayArea = danmakuDisplayArea,
             mergeDuplicates = danmakuMergeDuplicates,
+            duplicateMergeWindowMs = danmakuDuplicateMergeWindowMs,
+            duplicateMergeCountThreshold = danmakuDuplicateMergeCountThreshold,
             allowScroll = danmakuAllowScroll,
             allowTop = danmakuAllowTop,
             allowBottom = danmakuAllowBottom,

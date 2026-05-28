@@ -671,6 +671,8 @@ fun FullscreenPlayerOverlay(
         val danmakuSpeed = danmakuSettings.speed
         val danmakuDisplayArea = danmakuSettings.displayArea
         val danmakuMergeDuplicates = danmakuSettings.mergeDuplicates
+        val danmakuDuplicateMergeWindowMs = danmakuSettings.duplicateMergeWindowMs
+        val danmakuDuplicateMergeCountThreshold = danmakuSettings.duplicateMergeCountThreshold
         val danmakuAllowScroll = danmakuSettings.allowScroll
         val danmakuAllowTop = danmakuSettings.allowTop
         val danmakuAllowBottom = danmakuSettings.allowBottom
@@ -707,6 +709,8 @@ fun FullscreenPlayerOverlay(
             danmakuSpeed,
             danmakuDisplayArea,
             danmakuMergeDuplicates,
+            danmakuDuplicateMergeWindowMs,
+            danmakuDuplicateMergeCountThreshold,
             danmakuAllowScroll,
             danmakuAllowTop,
             danmakuAllowBottom,
@@ -721,6 +725,8 @@ fun FullscreenPlayerOverlay(
                 speed = danmakuSpeed,
                 displayArea = danmakuDisplayArea,
                 mergeDuplicates = danmakuMergeDuplicates,
+                duplicateMergeWindowMs = danmakuDuplicateMergeWindowMs,
+                duplicateMergeCountThreshold = danmakuDuplicateMergeCountThreshold,
                 allowScroll = danmakuAllowScroll,
                 allowTop = danmakuAllowTop,
                 allowBottom = danmakuAllowBottom,
@@ -1061,6 +1067,12 @@ fun FullscreenPlayerOverlay(
             var localSpeed by remember(danmakuSpeed) { mutableFloatStateOf(danmakuSpeed) }
             var localDisplayArea by remember(danmakuDisplayArea) { mutableFloatStateOf(danmakuDisplayArea) }
             var localMergeDuplicates by remember(danmakuMergeDuplicates) { mutableStateOf(danmakuMergeDuplicates) }
+            var localDuplicateMergeWindowMs by remember(danmakuDuplicateMergeWindowMs) {
+                mutableStateOf(danmakuDuplicateMergeWindowMs)
+            }
+            var localDuplicateMergeCountThreshold by remember(danmakuDuplicateMergeCountThreshold) {
+                mutableStateOf(danmakuDuplicateMergeCountThreshold)
+            }
             var localAllowScroll by remember(danmakuAllowScroll) { mutableStateOf(danmakuAllowScroll) }
             var localAllowTop by remember(danmakuAllowTop) { mutableStateOf(danmakuAllowTop) }
             var localAllowBottom by remember(danmakuAllowBottom) { mutableStateOf(danmakuAllowBottom) }
@@ -1083,6 +1095,8 @@ fun FullscreenPlayerOverlay(
                 speed = localSpeed,
                 displayArea = localDisplayArea,
                 mergeDuplicates = localMergeDuplicates,
+                duplicateMergeWindowMs = localDuplicateMergeWindowMs,
+                duplicateMergeCountThreshold = localDuplicateMergeCountThreshold,
                 allowScroll = localAllowScroll,
                 allowTop = localAllowTop,
                 allowBottom = localAllowBottom,
@@ -1118,6 +1132,14 @@ fun FullscreenPlayerOverlay(
                     // 需要在 Manager 中添加临时变量或直接持久化
                     // 对于 Switch 这种立即生效的 Prefernce，直接存就行
                     scope.launch { SettingsManager.setDanmakuMergeDuplicates(context, it, danmakuScope) }
+                },
+                onDuplicateMergeWindowMsChange = {
+                    localDuplicateMergeWindowMs = it
+                    scope.launch { SettingsManager.setDanmakuDuplicateMergeWindowMs(context, it, danmakuScope) }
+                },
+                onDuplicateMergeCountThresholdChange = {
+                    localDuplicateMergeCountThreshold = it
+                    scope.launch { SettingsManager.setDanmakuDuplicateMergeCountThreshold(context, it, danmakuScope) }
                 },
                 onAllowScrollChange = {
                     localAllowScroll = it

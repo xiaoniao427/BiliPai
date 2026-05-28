@@ -316,6 +316,42 @@ class ReplyComponentsPolicyTest {
     }
 
     @Test
+    fun `reply action sheet policy includes share and block actions when supported`() {
+        assertContentEquals(
+            listOf(
+                ReplyActionSheetAction.COPY_ALL,
+                ReplyActionSheetAction.FREE_COPY,
+                ReplyActionSheetAction.SAVE,
+                ReplyActionSheetAction.SHARE,
+                ReplyActionSheetAction.REPLY,
+                ReplyActionSheetAction.BLOCK_USER,
+                ReplyActionSheetAction.REPORT,
+                ReplyActionSheetAction.TOGGLE_TOP,
+                ReplyActionSheetAction.DELETE
+            ),
+            buildReplyActionSheetActions(
+                canDelete = true,
+                canReport = true,
+                canShare = true,
+                canBlockUser = true,
+                topActionLabel = "置顶"
+            )
+        )
+    }
+
+    @Test
+    fun `reply action sheet policy hides share when api disables support share`() {
+        assertFalse(
+            buildReplyActionSheetActions(
+                canDelete = false,
+                canReport = false,
+                canShare = false,
+                canBlockUser = false
+            ).contains(ReplyActionSheetAction.SHARE)
+        )
+    }
+
+    @Test
     fun `buildReplyCommentImageSpec carries author message and qr url`() {
         val spec = buildReplyCommentImageSpec(
             ReplyItem(

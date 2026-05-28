@@ -92,6 +92,7 @@ import com.android.purebilibili.data.repository.SearchLiveOrder
 import com.android.purebilibili.data.repository.SearchOrderSort
 import com.android.purebilibili.data.repository.SearchUpOrder
 import com.android.purebilibili.data.repository.SearchUserType
+import com.android.purebilibili.data.repository.resolveSearchDurationFilterLabel
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.ui.adaptive.resolveDeviceUiProfile
@@ -723,7 +724,7 @@ fun SearchScreen(
                                          SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -731,7 +732,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -842,7 +843,7 @@ fun SearchScreen(
                                         SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -850,7 +851,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -930,7 +931,7 @@ fun SearchScreen(
                                         SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -938,7 +939,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -995,7 +996,7 @@ fun SearchScreen(
                                         SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -1003,7 +1004,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -1081,7 +1082,7 @@ fun SearchScreen(
                                         SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -1089,7 +1090,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -1141,7 +1142,7 @@ fun SearchScreen(
                                         SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -1149,7 +1150,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -1226,7 +1227,7 @@ fun SearchScreen(
                                         SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -1234,7 +1235,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -1276,7 +1277,7 @@ fun SearchScreen(
                                         SearchFilterBar(
                                             currentType = state.searchType,
                                             currentOrder = state.searchOrder,
-                                            currentDuration = state.searchDuration,
+                                            currentDurations = state.searchDurations,
                                             currentVideoTid = state.videoTid,
                                             currentUpOrder = state.upOrder,
                                             currentUpOrderSort = state.upOrderSort,
@@ -1284,7 +1285,7 @@ fun SearchScreen(
                                             currentLiveOrder = state.liveOrder,
                                             onTypeChange = { viewModel.setSearchType(it) },
                                             onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationChange = { viewModel.setSearchDuration(it) },
+                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
                                             onVideoTidChange = { viewModel.setVideoTid(it) },
                                             onUpOrderChange = { viewModel.setUpOrder(it) },
                                             onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
@@ -2076,7 +2077,7 @@ fun SearchHistorySection(
 fun SearchFilterBar(
     currentType: SearchType,
     currentOrder: SearchOrder,
-    currentDuration: SearchDuration,
+    currentDurations: Set<SearchDuration>,
     currentVideoTid: Int,
     currentUpOrder: SearchUpOrder,
     currentUpOrderSort: SearchOrderSort,
@@ -2084,7 +2085,7 @@ fun SearchFilterBar(
     currentLiveOrder: SearchLiveOrder,
     onTypeChange: (SearchType) -> Unit,
     onOrderChange: (SearchOrder) -> Unit,
-    onDurationChange: (SearchDuration) -> Unit,
+    onDurationToggle: (SearchDuration) -> Unit,
     onVideoTidChange: (Int) -> Unit,
     onUpOrderChange: (SearchUpOrder) -> Unit,
     onUpOrderSortChange: (SearchOrderSort) -> Unit,
@@ -2197,8 +2198,8 @@ fun SearchFilterBar(
                 if (SearchFilterControl.VIDEO_DURATION in filterControls) {
                 Box {
                     FilterMenuChip(
-                        text = currentDuration.displayName,
-                        highlighted = currentDuration != SearchDuration.ALL,
+                        text = resolveSearchDurationFilterLabel(currentDurations),
+                        highlighted = currentDurations.isNotEmpty(),
                         onClick = { showDurationMenu = true }
                     )
                     DropdownMenu(
@@ -2206,11 +2207,21 @@ fun SearchFilterBar(
                         onDismissRequest = { showDurationMenu = false }
                     ) {
                         SearchDuration.entries.forEach { duration ->
+                            val selected = if (duration == SearchDuration.ALL) {
+                                currentDurations.isEmpty()
+                            } else {
+                                duration in currentDurations
+                            }
                             DropdownMenuItem(
                                 text = { Text(duration.displayName) },
+                                leadingIcon = {
+                                    Checkbox(
+                                        checked = selected,
+                                        onCheckedChange = null
+                                    )
+                                },
                                 onClick = {
-                                    onDurationChange(duration)
-                                    showDurationMenu = false
+                                    onDurationToggle(duration)
                                 }
                             )
                         }

@@ -1210,6 +1210,12 @@ private fun VideoDetailDanmakuSettingsPanel(
     var localSpeed by remember(danmakuSettings.speed) { mutableFloatStateOf(danmakuSettings.speed) }
     var localDisplayArea by remember(danmakuSettings.displayArea) { mutableFloatStateOf(danmakuSettings.displayArea) }
     var localMergeDuplicates by remember(danmakuSettings.mergeDuplicates) { mutableStateOf(danmakuSettings.mergeDuplicates) }
+    var localDuplicateMergeWindowMs by remember(danmakuSettings.duplicateMergeWindowMs) {
+        mutableStateOf(danmakuSettings.duplicateMergeWindowMs)
+    }
+    var localDuplicateMergeCountThreshold by remember(danmakuSettings.duplicateMergeCountThreshold) {
+        mutableStateOf(danmakuSettings.duplicateMergeCountThreshold)
+    }
     var localAllowScroll by remember(danmakuSettings.allowScroll) { mutableStateOf(danmakuSettings.allowScroll) }
     var localAllowTop by remember(danmakuSettings.allowTop) { mutableStateOf(danmakuSettings.allowTop) }
     var localAllowBottom by remember(danmakuSettings.allowBottom) { mutableStateOf(danmakuSettings.allowBottom) }
@@ -1228,6 +1234,8 @@ private fun VideoDetailDanmakuSettingsPanel(
         speed = localSpeed,
         displayArea = localDisplayArea,
         mergeDuplicates = localMergeDuplicates,
+        duplicateMergeWindowMs = localDuplicateMergeWindowMs,
+        duplicateMergeCountThreshold = localDuplicateMergeCountThreshold,
         allowScroll = localAllowScroll,
         allowTop = localAllowTop,
         allowBottom = localAllowBottom,
@@ -1257,6 +1265,14 @@ private fun VideoDetailDanmakuSettingsPanel(
         onMergeDuplicatesChange = {
             localMergeDuplicates = it
             scope.launch { SettingsManager.setDanmakuMergeDuplicates(context, it, danmakuScope) }
+        },
+        onDuplicateMergeWindowMsChange = {
+            localDuplicateMergeWindowMs = it
+            scope.launch { SettingsManager.setDanmakuDuplicateMergeWindowMs(context, it, danmakuScope) }
+        },
+        onDuplicateMergeCountThresholdChange = {
+            localDuplicateMergeCountThreshold = it
+            scope.launch { SettingsManager.setDanmakuDuplicateMergeCountThreshold(context, it, danmakuScope) }
         },
         onAllowScrollChange = {
             localAllowScroll = it

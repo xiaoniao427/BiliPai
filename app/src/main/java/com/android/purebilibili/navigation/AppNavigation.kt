@@ -795,7 +795,7 @@ fun AppNavigation(
                 }
             }
         }
-        val submitSearchKeywordInNavigation3: (String) -> Unit = { keyword ->
+        fun pushSearchRouteInNavigation3(keyword: String) {
             val normalizedKeyword = keyword.trim()
             if (normalizedKeyword.isNotEmpty()) {
                 pushNavigation3Route(ScreenRoutes.Search.route) {
@@ -803,13 +803,14 @@ fun AppNavigation(
                 }
             }
         }
+
         fun openBilibiliNativeTargetInNavigation3(target: BilibiliNavigationTarget): Boolean {
             when (target) {
                 is BilibiliNavigationTarget.Video -> navigateToVideoInNavigation3(target.videoId, 0L, "")
                 is BilibiliNavigationTarget.Dynamic -> {
                     pushNavigation3Key(BiliPaiNavKey.DynamicDetail(target.dynamicId))
                 }
-                is BilibiliNavigationTarget.Search -> submitSearchKeywordInNavigation3(target.keyword)
+                is BilibiliNavigationTarget.Search -> pushSearchRouteInNavigation3(target.keyword)
                 is BilibiliNavigationTarget.Space -> {
                     if (target.mid <= 0L) return false
                     pushNavigation3Key(BiliPaiNavKey.Space(target.mid))
@@ -832,6 +833,13 @@ fun AppNavigation(
                 }
             }
             return true
+        }
+        val submitSearchKeywordInNavigation3: (String) -> Unit = { keyword ->
+            when (val action = resolveSearchSubmitAction(keyword)) {
+                SearchSubmitAction.Ignore -> Unit
+                is SearchSubmitAction.OpenSearch -> pushSearchRouteInNavigation3(action.keyword)
+                is SearchSubmitAction.OpenNativeTarget -> openBilibiliNativeTargetInNavigation3(action.target)
+            }
         }
         fun openBilibiliLinkInNavigation3(rawLink: String) {
             when (val action = resolveBilibiliLinkNavigationAction(rawLink)) {

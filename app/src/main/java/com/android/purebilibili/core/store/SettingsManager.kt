@@ -499,6 +499,8 @@ data class DanmakuSettings(
     val staticDanmakuToScroll: Boolean = false,
     val massiveMode: Boolean = false,
     val mergeDuplicates: Boolean = true,
+    val duplicateMergeWindowMs: Int = 500,
+    val duplicateMergeCountThreshold: Int = 2,
     val allowScroll: Boolean = true,
     val allowTop: Boolean = true,
     val allowBottom: Boolean = true,
@@ -2382,6 +2384,8 @@ object SettingsManager {
     private const val DEFAULT_DANMAKU_LINE_HEIGHT = 1.6f
     private const val DEFAULT_DANMAKU_SCROLL_DURATION_SECONDS = 7.0f
     private const val DEFAULT_DANMAKU_STATIC_DURATION_SECONDS = 4.0f
+    private const val DEFAULT_DANMAKU_DUPLICATE_MERGE_WINDOW_MS = 500
+    private const val DEFAULT_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD = 2
 
     private fun normalizeDanmakuFontWeight(value: Int?): Int {
         return (value ?: DEFAULT_DANMAKU_FONT_WEIGHT).coerceIn(0, 8)
@@ -2409,6 +2413,16 @@ object SettingsManager {
         val raw = value ?: DEFAULT_DANMAKU_STATIC_DURATION_SECONDS
         if (!raw.isFinite()) return DEFAULT_DANMAKU_STATIC_DURATION_SECONDS
         return raw.coerceIn(1.0f, 50.0f)
+    }
+
+    private fun normalizeDanmakuDuplicateMergeWindowMs(value: Int?): Int {
+        val raw = value ?: DEFAULT_DANMAKU_DUPLICATE_MERGE_WINDOW_MS
+        return raw.coerceIn(100, 3000)
+    }
+
+    private fun normalizeDanmakuDuplicateMergeCountThreshold(value: Int?): Int {
+        val raw = value ?: DEFAULT_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD
+        return raw.coerceIn(2, 10)
     }
 
     private fun buildScopedDanmakuKeyName(
@@ -2445,6 +2459,10 @@ object SettingsManager {
         intPreferencesKey("danmaku_fullscreen_panel_width_mode")
     private val KEY_DANMAKU_BLOCK_RULES = stringPreferencesKey("danmaku_block_rules")
     private val KEY_DANMAKU_MERGE_DUPLICATES = booleanPreferencesKey("danmaku_merge_duplicates")
+    private val KEY_DANMAKU_DUPLICATE_MERGE_WINDOW_MS =
+        intPreferencesKey("danmaku_duplicate_merge_window_ms")
+    private val KEY_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD =
+        intPreferencesKey("danmaku_duplicate_merge_count_threshold")
     private val KEY_DANMAKU_SEND_COLOR = intPreferencesKey("danmaku_send_color")
     private val KEY_DANMAKU_SEND_MODE = intPreferencesKey("danmaku_send_mode")
     private val KEY_DANMAKU_SEND_FONT_SIZE = intPreferencesKey("danmaku_send_font_size")
@@ -2493,6 +2511,10 @@ object SettingsManager {
         stringPreferencesKey(buildScopedDanmakuKeyName(scope, "block_rules"))
     private fun keyDanmakuMergeDuplicates(scope: DanmakuSettingsScope) =
         booleanPreferencesKey(buildScopedDanmakuKeyName(scope, "merge_duplicates"))
+    private fun keyDanmakuDuplicateMergeWindowMs(scope: DanmakuSettingsScope) =
+        intPreferencesKey(buildScopedDanmakuKeyName(scope, "duplicate_merge_window_ms"))
+    private fun keyDanmakuDuplicateMergeCountThreshold(scope: DanmakuSettingsScope) =
+        intPreferencesKey(buildScopedDanmakuKeyName(scope, "duplicate_merge_count_threshold"))
 
     private fun <T> readScopedDanmakuPreference(
         preferences: Preferences,
@@ -2613,6 +2635,22 @@ object SettingsManager {
                 scopeKey = keyDanmakuMergeDuplicates(scope),
                 legacyKey = KEY_DANMAKU_MERGE_DUPLICATES,
                 defaultValue = true
+            ),
+            duplicateMergeWindowMs = normalizeDanmakuDuplicateMergeWindowMs(
+                readScopedDanmakuPreference(
+                    preferences = preferences,
+                    scopeKey = keyDanmakuDuplicateMergeWindowMs(scope),
+                    legacyKey = KEY_DANMAKU_DUPLICATE_MERGE_WINDOW_MS,
+                    defaultValue = DEFAULT_DANMAKU_DUPLICATE_MERGE_WINDOW_MS
+                )
+            ),
+            duplicateMergeCountThreshold = normalizeDanmakuDuplicateMergeCountThreshold(
+                readScopedDanmakuPreference(
+                    preferences = preferences,
+                    scopeKey = keyDanmakuDuplicateMergeCountThreshold(scope),
+                    legacyKey = KEY_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD,
+                    defaultValue = DEFAULT_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD
+                )
             ),
             allowScroll = readScopedDanmakuPreference(
                 preferences = preferences,
@@ -3260,6 +3298,58 @@ object SettingsManager {
             preferences[keyDanmakuMergeDuplicates(scope)] = value
         }
     }
+
+    fun getDanmakuDuplicateMergeWindowMs(
+        context: Context,
+        scope: DanmakuSettingsScope = DanmakuSettingsScope.PORTRAIT
+    ): Flow<Int> = context.settingsDataStore.data
+        .map { preferences ->
+            normalizeDanmakuDuplicateMergeWindowMs(
+                readScopedDanmakuPreference(
+                    preferences = preferences,
+                    scopeKey = keyDanmakuDuplicateMergeWindowMs(scope),
+                    legacyKey = KEY_DANMAKU_DUPLICATE_MERGE_WINDOW_MS,
+                    defaultValue = DEFAULT_DANMAKU_DUPLICATE_MERGE_WINDOW_MS
+                )
+            )
+        }
+
+    suspend fun setDanmakuDuplicateMergeWindowMs(
+        context: Context,
+        value: Int,
+        scope: DanmakuSettingsScope = DanmakuSettingsScope.PORTRAIT
+    ) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[keyDanmakuDuplicateMergeWindowMs(scope)] =
+                normalizeDanmakuDuplicateMergeWindowMs(value)
+        }
+    }
+
+    fun getDanmakuDuplicateMergeCountThreshold(
+        context: Context,
+        scope: DanmakuSettingsScope = DanmakuSettingsScope.PORTRAIT
+    ): Flow<Int> = context.settingsDataStore.data
+        .map { preferences ->
+            normalizeDanmakuDuplicateMergeCountThreshold(
+                readScopedDanmakuPreference(
+                    preferences = preferences,
+                    scopeKey = keyDanmakuDuplicateMergeCountThreshold(scope),
+                    legacyKey = KEY_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD,
+                    defaultValue = DEFAULT_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD
+                )
+            )
+        }
+
+    suspend fun setDanmakuDuplicateMergeCountThreshold(
+        context: Context,
+        value: Int,
+        scope: DanmakuSettingsScope = DanmakuSettingsScope.PORTRAIT
+    ) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[keyDanmakuDuplicateMergeCountThreshold(scope)] =
+                normalizeDanmakuDuplicateMergeCountThreshold(value)
+        }
+    }
     
     // 强制更新弹幕默认值（覆盖已有设置，版本升级时触发一次）
     suspend fun forceDanmakuDefaults(context: Context) {
@@ -3280,6 +3370,10 @@ object SettingsManager {
                 preferences[KEY_DANMAKU_SCROLL_FIXED_VELOCITY] = false
                 preferences[KEY_DANMAKU_STATIC_TO_SCROLL] = false
                 preferences[KEY_DANMAKU_MASSIVE_MODE] = false
+                preferences[KEY_DANMAKU_DUPLICATE_MERGE_WINDOW_MS] =
+                    DEFAULT_DANMAKU_DUPLICATE_MERGE_WINDOW_MS
+                preferences[KEY_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD] =
+                    DEFAULT_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD
                 preferences[KEY_DANMAKU_ALLOW_SCROLL] = true
                 preferences[KEY_DANMAKU_ALLOW_TOP] = true
                 preferences[KEY_DANMAKU_ALLOW_BOTTOM] = true
@@ -5163,6 +5257,11 @@ object SettingsManager {
             BooleanShareablePreferenceDefinition(KEY_DANMAKU_SMART_OCCLUSION, SettingsShareSection.DANMAKU),
             StringShareablePreferenceDefinition(KEY_DANMAKU_BLOCK_RULES, SettingsShareSection.DANMAKU),
             BooleanShareablePreferenceDefinition(KEY_DANMAKU_MERGE_DUPLICATES, SettingsShareSection.DANMAKU),
+            IntShareablePreferenceDefinition(KEY_DANMAKU_DUPLICATE_MERGE_WINDOW_MS, SettingsShareSection.DANMAKU),
+            IntShareablePreferenceDefinition(
+                KEY_DANMAKU_DUPLICATE_MERGE_COUNT_THRESHOLD,
+                SettingsShareSection.DANMAKU
+            ),
 
             StringShareablePreferenceDefinition(KEY_BOTTOM_BAR_ORDER, SettingsShareSection.NAVIGATION),
             StringShareablePreferenceDefinition(KEY_BOTTOM_BAR_VISIBLE_TABS, SettingsShareSection.NAVIGATION),

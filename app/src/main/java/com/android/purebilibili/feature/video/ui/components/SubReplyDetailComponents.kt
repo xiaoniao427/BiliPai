@@ -1,5 +1,6 @@
 package com.android.purebilibili.feature.video.ui.components
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -71,6 +72,8 @@ import com.android.purebilibili.core.ui.common.CopySelectionDialog
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.util.rememberStoragePermissionState
 import com.android.purebilibili.data.model.response.ReplyItem
+import com.android.purebilibili.data.repository.BlockedUpRelationSource
+import com.android.purebilibili.data.repository.BlockedUpRepository
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextContent
 import com.android.purebilibili.core.ui.animation.MaybeDissolvableVideoCard
 import com.android.purebilibili.core.ui.common.rememberClipboardCopyHandler
@@ -717,11 +720,13 @@ private fun SubReplyDetailItem(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val copyToClipboard = rememberClipboardCopyHandler()
+    val blockedUpRepository = remember(context) { BlockedUpRepository(context) }
     var showActionSheet by remember(item.rpid) { mutableStateOf(false) }
     var showFreeCopyDialog by remember(item.rpid) { mutableStateOf(false) }
     var showReportDialog by remember(item.rpid) { mutableStateOf(false) }
     var pendingSaveReply by remember(item.rpid) { mutableStateOf<ReplyItem?>(null) }
     val copyText = remember(item.content.message) { item.content.message.trim() }
+    val replyMemberMid = remember(item.member.mid, item.mid) { resolveReplyMemberMid(item) }
     fun launchSaveReplyCommentImage(reply: ReplyItem) {
         scope.launch {
             val success = saveReplyCommentImageToGallery(context, reply)
@@ -747,18 +752,45 @@ private fun SubReplyDetailItem(
             storagePermission.request()
         }
     }
+    fun shareReplyComment() {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "分享评论")
+            putExtra(Intent.EXTRA_TEXT, buildReplyCommentShareText(item))
+        }
+        context.startActivity(Intent.createChooser(sendIntent, "分享评论"))
+    }
+    fun blockReplyUser() {
+        scope.launch {
+            val result = blockedUpRepository.blockUpWithBilibiliSync(
+                mid = replyMemberMid,
+                name = item.member.uname,
+                face = item.member.avatar,
+                relationSource = BlockedUpRelationSource.COMMENT
+            )
+            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (showActionSheet) {
         ReplyActionSheet(
             canDelete = onDeleteClick != null,
             canReport = onReportClick != null,
+            canShare = shouldSupportReplyShare(item),
+            canBlockUser = replyMemberMid > 0L,
             onDismiss = { showActionSheet = false },
             onCopyAll = { copyToClipboard(copyText, "评论内容") },
             onFreeCopy = { showFreeCopyDialog = true },
             onSave = {
                 requestSaveReplyCommentImage()
             },
+            onShare = {
+                shareReplyComment()
+            },
             onReply = onReplyClick,
+            onBlockUser = {
+                blockReplyUser()
+            },
             onReport = { showReportDialog = true },
             onToggleTop = {},
             onDelete = { onDeleteClick?.invoke() }

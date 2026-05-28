@@ -1784,6 +1784,8 @@ fun VideoPlayerSection(
         val danmakuStaticToScroll = danmakuSettings.staticDanmakuToScroll
         val danmakuMassiveMode = danmakuSettings.massiveMode
         val danmakuMergeDuplicates = danmakuSettings.mergeDuplicates
+        val danmakuDuplicateMergeWindowMs = danmakuSettings.duplicateMergeWindowMs
+        val danmakuDuplicateMergeCountThreshold = danmakuSettings.duplicateMergeCountThreshold
         val danmakuAllowScroll = danmakuSettings.allowScroll
         val danmakuAllowTop = danmakuSettings.allowTop
         val danmakuAllowBottom = danmakuSettings.allowBottom
@@ -2040,6 +2042,8 @@ fun VideoPlayerSection(
             danmakuStaticToScroll,
             danmakuMassiveMode,
             danmakuMergeDuplicates,
+            danmakuDuplicateMergeWindowMs,
+            danmakuDuplicateMergeCountThreshold,
             danmakuAllowScroll,
             danmakuAllowTop,
             danmakuAllowBottom,
@@ -2062,6 +2066,8 @@ fun VideoPlayerSection(
                 staticDanmakuToScroll = danmakuStaticToScroll,
                 massiveMode = danmakuMassiveMode,
                 mergeDuplicates = danmakuMergeDuplicates,
+                duplicateMergeWindowMs = danmakuDuplicateMergeWindowMs,
+                duplicateMergeCountThreshold = danmakuDuplicateMergeCountThreshold,
                 allowScroll = danmakuAllowScroll,
                 allowTop = danmakuAllowTop,
                 allowBottom = danmakuAllowBottom,
@@ -3640,6 +3646,8 @@ fun VideoPlayerSection(
                 danmakuStaticToScroll = danmakuStaticToScroll,
                 danmakuMassiveMode = danmakuMassiveMode,
                 danmakuMergeDuplicates = danmakuMergeDuplicates,
+                danmakuDuplicateMergeWindowMs = danmakuDuplicateMergeWindowMs,
+                danmakuDuplicateMergeCountThreshold = danmakuDuplicateMergeCountThreshold,
                 danmakuAllowScroll = danmakuAllowScroll,
                 danmakuAllowTop = danmakuAllowTop,
                 danmakuAllowBottom = danmakuAllowBottom,
@@ -3778,6 +3786,24 @@ fun VideoPlayerSection(
                 onDanmakuMergeDuplicatesChange = { value ->
                     scope.launch {
                         com.android.purebilibili.core.store.SettingsManager.setDanmakuMergeDuplicates(
+                            context,
+                            value,
+                            activeDanmakuScope
+                        )
+                    }
+                },
+                onDanmakuDuplicateMergeWindowMsChange = { value ->
+                    scope.launch {
+                        com.android.purebilibili.core.store.SettingsManager.setDanmakuDuplicateMergeWindowMs(
+                            context,
+                            value,
+                            activeDanmakuScope
+                        )
+                    }
+                },
+                onDanmakuDuplicateMergeCountThresholdChange = { value ->
+                    scope.launch {
+                        com.android.purebilibili.core.store.SettingsManager.setDanmakuDuplicateMergeCountThreshold(
                             context,
                             value,
                             activeDanmakuScope

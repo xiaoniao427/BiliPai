@@ -195,6 +195,8 @@ fun BangumiPlayerScreen(
     val danmakuSpeed = danmakuSettings.speed
     val danmakuDisplayArea = danmakuSettings.displayArea
     val danmakuMergeDuplicates = danmakuSettings.mergeDuplicates
+    val danmakuDuplicateMergeWindowMs = danmakuSettings.duplicateMergeWindowMs
+    val danmakuDuplicateMergeCountThreshold = danmakuSettings.duplicateMergeCountThreshold
     val danmakuAllowScroll = danmakuSettings.allowScroll
     val danmakuAllowTop = danmakuSettings.allowTop
     val danmakuAllowBottom = danmakuSettings.allowBottom
@@ -209,6 +211,8 @@ fun BangumiPlayerScreen(
         danmakuSpeed,
         danmakuDisplayArea,
         danmakuMergeDuplicates,
+        danmakuDuplicateMergeWindowMs,
+        danmakuDuplicateMergeCountThreshold,
         danmakuAllowScroll,
         danmakuAllowTop,
         danmakuAllowBottom,
@@ -222,6 +226,8 @@ fun BangumiPlayerScreen(
             speed = danmakuSpeed,
             displayArea = danmakuDisplayArea,
             mergeDuplicates = danmakuMergeDuplicates,
+            duplicateMergeWindowMs = danmakuDuplicateMergeWindowMs,
+            duplicateMergeCountThreshold = danmakuDuplicateMergeCountThreshold,
             allowScroll = danmakuAllowScroll,
             allowTop = danmakuAllowTop,
             allowBottom = danmakuAllowBottom,
@@ -459,6 +465,8 @@ fun BangumiPlayerScreen(
                     danmakuSpeed = danmakuSpeed,
                     danmakuDisplayArea = danmakuDisplayArea,
                     danmakuMergeDuplicates = danmakuMergeDuplicates,
+                    danmakuDuplicateMergeWindowMs = danmakuDuplicateMergeWindowMs,
+                    danmakuDuplicateMergeCountThreshold = danmakuDuplicateMergeCountThreshold,
                     onDanmakuOpacityChange = {
                         scope.launch {
                             com.android.purebilibili.core.store.SettingsManager.setDanmakuOpacity(context, it, activeDanmakuScope)
@@ -482,6 +490,16 @@ fun BangumiPlayerScreen(
                     onDanmakuMergeDuplicatesChange = {
                         scope.launch {
                             com.android.purebilibili.core.store.SettingsManager.setDanmakuMergeDuplicates(context, it, activeDanmakuScope)
+                        }
+                    },
+                    onDanmakuDuplicateMergeWindowMsChange = {
+                        scope.launch {
+                            com.android.purebilibili.core.store.SettingsManager.setDanmakuDuplicateMergeWindowMs(context, it, activeDanmakuScope)
+                        }
+                    },
+                    onDanmakuDuplicateMergeCountThresholdChange = {
+                        scope.launch {
+                            com.android.purebilibili.core.store.SettingsManager.setDanmakuDuplicateMergeCountThreshold(context, it, activeDanmakuScope)
                         }
                     },
                     isLiked = successState?.isLiked ?: false,

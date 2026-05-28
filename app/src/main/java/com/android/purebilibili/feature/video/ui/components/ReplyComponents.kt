@@ -1,5 +1,6 @@
 package com.android.purebilibili.feature.video.ui.components
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -57,6 +58,8 @@ import com.android.purebilibili.data.model.response.ReplyPicture
 import com.android.purebilibili.data.model.response.ReplySailingCardBg
 import com.android.purebilibili.data.model.response.ReplySailingFan
 import com.android.purebilibili.data.model.response.ReplyUpAction
+import com.android.purebilibili.data.repository.BlockedUpRelationSource
+import com.android.purebilibili.data.repository.BlockedUpRepository
 import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextContent
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextPlacement
@@ -349,6 +352,81 @@ internal fun buildReplyCommentShareText(item: ReplyItem): String {
             append(url)
         }
     }
+}
+
+internal fun resolveReplyMemberMid(item: ReplyItem): Long {
+    return item.member.mid.toLongOrNull()?.takeIf { it > 0L }
+        ?: item.mid.takeIf { it > 0L }
+        ?: 0L
+}
+
+internal fun shouldSupportReplyShare(item: ReplyItem): Boolean {
+    return item.replyControl?.supportShare ?: true
+}
+
+internal enum class ReplyActionSheetAction {
+    COPY_ALL,
+    FREE_COPY,
+    SAVE,
+    SHARE,
+    REPLY,
+    BLOCK_USER,
+    REPORT,
+    TOGGLE_TOP,
+    DELETE
+}
+
+internal fun buildReplyActionSheetActions(
+    canDelete: Boolean,
+    canReport: Boolean,
+    canShare: Boolean,
+    canBlockUser: Boolean,
+    topActionLabel: String? = null
+): List<ReplyActionSheetAction> {
+    return buildList {
+        add(ReplyActionSheetAction.COPY_ALL)
+        add(ReplyActionSheetAction.FREE_COPY)
+        add(ReplyActionSheetAction.SAVE)
+        if (canShare) {
+            add(ReplyActionSheetAction.SHARE)
+        }
+        add(ReplyActionSheetAction.REPLY)
+        if (canBlockUser) {
+            add(ReplyActionSheetAction.BLOCK_USER)
+        }
+        if (canReport) {
+            add(ReplyActionSheetAction.REPORT)
+        }
+        if (!topActionLabel.isNullOrBlank()) {
+            add(ReplyActionSheetAction.TOGGLE_TOP)
+        }
+        if (canDelete) {
+            add(ReplyActionSheetAction.DELETE)
+        }
+    }
+}
+
+private fun resolveReplyActionSheetLabel(
+    action: ReplyActionSheetAction,
+    topActionLabel: String?
+): String {
+    return when (action) {
+        ReplyActionSheetAction.COPY_ALL -> "复制全部"
+        ReplyActionSheetAction.FREE_COPY -> "自由复制"
+        ReplyActionSheetAction.SAVE -> "保存评论"
+        ReplyActionSheetAction.SHARE -> "分享评论"
+        ReplyActionSheetAction.REPLY -> "回复"
+        ReplyActionSheetAction.BLOCK_USER -> "屏蔽用户"
+        ReplyActionSheetAction.REPORT -> "举报"
+        ReplyActionSheetAction.TOGGLE_TOP -> topActionLabel.orEmpty()
+        ReplyActionSheetAction.DELETE -> "删除"
+    }
+}
+
+private fun isReplyActionDestructive(action: ReplyActionSheetAction): Boolean {
+    return action == ReplyActionSheetAction.REPORT ||
+        action == ReplyActionSheetAction.BLOCK_USER ||
+        action == ReplyActionSheetAction.DELETE
 }
 
 internal fun resolveReplyCommentImageSaveToast(success: Boolean): String {
@@ -1024,11 +1102,13 @@ fun ReplyItemView(
         shouldOpenReplyThreadFromRootClick(item)
     }
     val copyToClipboard = rememberClipboardCopyHandler()
+    val blockedUpRepository = remember(context) { BlockedUpRepository(context) }
     var showActionSheet by remember(item.rpid) { mutableStateOf(false) }
     var showFreeCopyDialog by remember(item.rpid) { mutableStateOf(false) }
     var showReportDialog by remember(item.rpid) { mutableStateOf(false) }
     var pendingSaveReply by remember(item.rpid) { mutableStateOf<ReplyItem?>(null) }
     val copyText = remember(item.content.message) { item.content.message.trim() }
+    val replyMemberMid = remember(item.member.mid, item.mid) { resolveReplyMemberMid(item) }
     fun launchSaveReplyCommentImage(reply: ReplyItem) {
         scope.launch {
             val success = saveReplyCommentImageToGallery(context, reply)
@@ -1054,11 +1134,32 @@ fun ReplyItemView(
             storagePermission.request()
         }
     }
+    fun shareReplyComment() {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "分享评论")
+            putExtra(Intent.EXTRA_TEXT, buildReplyCommentShareText(item))
+        }
+        context.startActivity(Intent.createChooser(sendIntent, "分享评论"))
+    }
+    fun blockReplyUser() {
+        scope.launch {
+            val result = blockedUpRepository.blockUpWithBilibiliSync(
+                mid = replyMemberMid,
+                name = item.member.uname,
+                face = item.member.avatar,
+                relationSource = BlockedUpRelationSource.COMMENT
+            )
+            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (showActionSheet) {
         ReplyActionSheet(
             canDelete = onDeleteClick != null,
             canReport = onReportClick != null,
+            canShare = shouldSupportReplyShare(item),
+            canBlockUser = replyMemberMid > 0L,
             topActionLabel = if (canToggleTop) resolveReplyTopActionLabel(showTopBadge) else null,
             onDismiss = { showActionSheet = false },
             onCopyAll = {
@@ -1070,8 +1171,14 @@ fun ReplyItemView(
             onSave = {
                 requestSaveReplyCommentImage()
             },
+            onShare = {
+                shareReplyComment()
+            },
             onReply = {
                 onReplyClick?.invoke() ?: onSubClick(item)
+            },
+            onBlockUser = {
+                blockReplyUser()
             },
             onReport = {
                 showReportDialog = true
@@ -2161,16 +2268,29 @@ private fun ReplyTextAction(
 internal fun ReplyActionSheet(
     canDelete: Boolean,
     canReport: Boolean,
+    canShare: Boolean = true,
+    canBlockUser: Boolean = false,
     topActionLabel: String? = null,
     onDismiss: () -> Unit,
     onCopyAll: () -> Unit,
     onFreeCopy: () -> Unit,
     onSave: () -> Unit,
+    onShare: () -> Unit = {},
     onReply: () -> Unit,
+    onBlockUser: () -> Unit = {},
     onReport: () -> Unit,
     onToggleTop: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val actions = remember(canDelete, canReport, canShare, canBlockUser, topActionLabel) {
+        buildReplyActionSheetActions(
+            canDelete = canDelete,
+            canReport = canReport,
+            canShare = canShare,
+            canBlockUser = canBlockUser,
+            topActionLabel = topActionLabel
+        )
+    }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -2178,59 +2298,22 @@ internal fun ReplyActionSheet(
                 .navigationBarsPadding()
                 .padding(bottom = 12.dp)
         ) {
-            ReplyActionSheetItem(
-                label = "复制全部",
-                onClick = {
-                    onCopyAll()
-                    onDismiss()
-                }
-            )
-            ReplyActionSheetItem(
-                label = "自由复制",
-                onClick = {
-                    onFreeCopy()
-                    onDismiss()
-                }
-            )
-            ReplyActionSheetItem(
-                label = "保存评论",
-                onClick = {
-                    onSave()
-                    onDismiss()
-                }
-            )
-            ReplyActionSheetItem(
-                label = "回复",
-                onClick = {
-                    onReply()
-                    onDismiss()
-                }
-            )
-            if (canReport) {
+            actions.forEach { action ->
                 ReplyActionSheetItem(
-                    label = "举报",
-                    isDestructive = true,
+                    label = resolveReplyActionSheetLabel(action, topActionLabel),
+                    isDestructive = isReplyActionDestructive(action),
                     onClick = {
-                        onReport()
-                        onDismiss()
-                    }
-                )
-            }
-            if (!topActionLabel.isNullOrBlank()) {
-                ReplyActionSheetItem(
-                    label = topActionLabel,
-                    onClick = {
-                        onToggleTop()
-                        onDismiss()
-                    }
-                )
-            }
-            if (canDelete) {
-                ReplyActionSheetItem(
-                    label = "删除",
-                    isDestructive = true,
-                    onClick = {
-                        onDelete()
+                        when (action) {
+                            ReplyActionSheetAction.COPY_ALL -> onCopyAll()
+                            ReplyActionSheetAction.FREE_COPY -> onFreeCopy()
+                            ReplyActionSheetAction.SAVE -> onSave()
+                            ReplyActionSheetAction.SHARE -> onShare()
+                            ReplyActionSheetAction.REPLY -> onReply()
+                            ReplyActionSheetAction.BLOCK_USER -> onBlockUser()
+                            ReplyActionSheetAction.REPORT -> onReport()
+                            ReplyActionSheetAction.TOGGLE_TOP -> onToggleTop()
+                            ReplyActionSheetAction.DELETE -> onDelete()
+                        }
                         onDismiss()
                     }
                 )

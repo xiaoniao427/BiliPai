@@ -172,7 +172,10 @@ data class FollowingUser(
     val mid: Long = 0,
     val uname: String = "",
     val face: String = "",
-    val sign: String = ""
+    val sign: String = "",
+    val mtime: Long = 0,
+    @SerialName("official_verify")
+    val officialVerify: OfficialVerify = OfficialVerify()
 )
 
 // --- 1. 核心通用视频模型 (UI层使用) ---
